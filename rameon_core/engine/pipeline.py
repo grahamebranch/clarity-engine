@@ -93,11 +93,10 @@ class Pipeline:
 
         return "\n".join(lines)
 
+    def run(self, assembled_output):
+        """
+        Final pipeline step for MVP.
+        Simply returns the assembled output from the engine.
+        """
+        return assembled_output
 
-
-
-    def run(self, input_data):
-        parsed = self.parse(input_data)
-        validated = self.validate(parsed)
-        transformed = self.transform(validated)
-        return self.output(transformed)
