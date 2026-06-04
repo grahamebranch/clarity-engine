@@ -98,62 +98,84 @@ class SimpleEngine(Engine):
     
     def detect_blocks(self, text):
         """
-        Deterministic block detection.
-        Turns the cleaned text into structural blocks:
-        - heading
-        - bullet_group
-        - paragraph
+        Deterministic block detection for MVP.
+        - Headings: lines starting with '## ' (level 2) or '# ' (level 1)
+        - Bullets: lines starting with '- '
+        - Paragraphs: other non-empty lines grouped until a blank line
         """
 
-        lines = text.split("\n")
+        lines = [l.rstrip() for l in text.splitlines()]
         blocks = []
-        buffer = []
-        current_type = None
 
-        def flush_buffer():
-            nonlocal buffer, current_type
-            if buffer:
+        current_paragraph_lines = []
+        current_bullet_lines = []
+
+        def flush_paragraph():
+            nonlocal current_paragraph_lines
+            if current_paragraph_lines:
+                content = "\n".join(current_paragraph_lines).strip()
+                if content:
+                    blocks.append({
+                        "type": "paragraph",
+                        "content": content
+                    })
+                current_paragraph_lines = []
+
+        def flush_bullets():
+            nonlocal current_bullet_lines
+            if current_bullet_lines:
+                content = "\n".join(current_bullet_lines).strip()
+                if content:
+                    blocks.append({
+                        "type": "bullet_group",
+                        "content": content
+                    })
+                current_bullet_lines = []
+
+        for raw_line in lines:
+            line = raw_line.strip()
+
+            # Blank line → flush current paragraph/bullets
+            if not line:
+                flush_paragraph()
+                flush_bullets()
+                continue
+
+            # Heading
+            if line.startswith("## "):
+                flush_paragraph()
+                flush_bullets()
                 blocks.append({
-                    "type": current_type,
-                    "content": "\n".join(buffer).strip()
+                    "type": "heading",
+                    "content": line[3:].strip()
                 })
-                buffer = []
-                current_type = None
-
-        for line in lines:
-            stripped = line.strip()
-
-            # Blank line → end current block
-            if stripped == "":
-                flush_buffer()
+                continue
+            elif line.startswith("# "):
+                flush_paragraph()
+                flush_bullets()
+                blocks.append({
+                    "type": "heading",
+                    "content": line[2:].strip()
+                })
                 continue
 
-            # Heading block
-            if stripped.startswith("#"):
-                flush_buffer()
-                current_type = "heading"
-                buffer.append(stripped)
-                flush_buffer()
+            # Bullet
+            if line.startswith("- "):
+                flush_paragraph()
+                current_bullet_lines.append(line[2:].strip())
                 continue
 
-            # Bullet group block
-            if stripped.startswith("- "):
-                if current_type != "bullet_group":
-                    flush_buffer()
-                    current_type = "bullet_group"
-                buffer.append(stripped)
-                continue
+            # Normal paragraph line
+            flush_bullets()
+            current_paragraph_lines.append(line)
 
-            # Paragraph block
-            if current_type != "paragraph":
-                flush_buffer()
-                current_type = "paragraph"
-            buffer.append(stripped)
-
-        # Flush final block
-        flush_buffer()
+        # Flush any remaining
+        flush_paragraph()
+        flush_bullets()
 
         return blocks
+
+
 
     def chunk_blocks(self, blocks):
         """
