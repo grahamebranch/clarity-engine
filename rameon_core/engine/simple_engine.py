@@ -10,15 +10,16 @@ class SimpleEngine(Engine):
     def load(self, config):
         pass
 
-        def run(self, input_data):
+    def run(self, input_data):
         input_data = self.normalize_headings(input_data)
         input_data = self.group_bullets(input_data)
         input_data = self.split_sentences(input_data)
         input_data = self.normalize_tokens(input_data)
 
         blocks = self.detect_blocks(input_data)
+        chunks = self.chunk_blocks(blocks)
 
-        return self.pipeline.run(blocks)
+        return self.pipeline.run(chunks)
 
 
     def shutdown(self):
@@ -149,3 +150,35 @@ class SimpleEngine(Engine):
         flush_buffer()
 
         return blocks
+
+    def chunk_blocks(self, blocks):
+        """
+        Deterministic semantic chunking.
+        Groups blocks under their nearest heading.
+        """
+
+        chunks = []
+        current_chunk = {
+            "heading": None,
+            "blocks": []
+        }
+
+        for block in blocks:
+            if block["type"] == "heading":
+                # Start a new chunk
+                if current_chunk["blocks"]:
+                    chunks.append(current_chunk)
+
+                current_chunk = {
+                    "heading": block["content"],
+                    "blocks": []
+                }
+            else:
+                # Add block to current chunk
+                current_chunk["blocks"].append(block)
+
+        # Add final chunk
+        if current_chunk["blocks"] or current_chunk["heading"]:
+            chunks.append(current_chunk)
+
+        return chunks
