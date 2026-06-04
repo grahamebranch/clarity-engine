@@ -19,10 +19,9 @@ class SimpleEngine(Engine):
         blocks = self.detect_blocks(input_data)
         chunks = self.chunk_blocks(blocks)
         chunks = self.detect_intents(chunks)
+        chunks = self.score_clarity(chunks)
 
         return self.pipeline.run(chunks)
-
-
 
     def shutdown(self):
         pass
@@ -221,3 +220,39 @@ class SimpleEngine(Engine):
             chunk["intent"] = intent
 
         return chunks
+
+    def score_clarity(self, chunks):
+        """
+        Deterministic clarity scoring for MVP.
+        Produces a 0–100 clarity score per chunk.
+        """
+
+        JARGON = {"utilize", "leverage", "synergy", "paradigm", "framework"}
+
+        for chunk in chunks:
+            text = "\n".join(b["content"] for b in chunk["blocks"]).strip()
+            words = text.split()
+            word_count = len(words)
+
+            # Base score
+            score = 100
+
+            # Penalty: long sentences
+            if word_count > 20:
+                score -= min(30, (word_count - 20))
+
+            # Penalty: jargon
+            jargon_hits = sum(1 for w in words if w.lower() in JARGON)
+            score -= jargon_hits * 5
+
+            # Bonus: bullet lists are clearer
+            if any(b["type"] == "bullet_group" for b in chunk["blocks"]):
+                score += 10
+
+            # Bonus: heading present
+            if chunk["heading"]:
+                score += 5
+
+            # Clamp score
+            score = max(0, min
+                        
