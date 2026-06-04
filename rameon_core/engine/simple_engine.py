@@ -11,16 +11,23 @@ class SimpleEngine(Engine):
         pass
 
     def run(self, input_data):
+        # Early normalization
         input_data = self.normalize_headings(input_data)
         input_data = self.group_bullets(input_data)
-        input_data = self.split_sentences(input_data)
-        input_data = self.normalize_tokens(input_data)
 
+        # Block detection BEFORE sentence splitting
         blocks = self.detect_blocks(input_data)
+
+        # Chunking
         chunks = self.chunk_blocks(blocks)
+
+        # Intent detection
         chunks = self.detect_intents(chunks)
+
+        # Clarity scoring (sentence splitting happens inside scoring, not before)
         chunks = self.score_clarity(chunks)
 
+        # Final assembly
         final_output = self.assemble_output(chunks)
 
         return self.pipeline.run(final_output)
