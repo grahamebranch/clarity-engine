@@ -10,12 +10,15 @@ class SimpleEngine(Engine):
     def load(self, config):
         pass
 
-    def run(self, input_data):
+        def run(self, input_data):
         input_data = self.normalize_headings(input_data)
         input_data = self.group_bullets(input_data)
         input_data = self.split_sentences(input_data)
         input_data = self.normalize_tokens(input_data)
-        return self.pipeline.run(input_data)
+
+        blocks = self.detect_blocks(input_data)
+
+        return self.pipeline.run(blocks)
 
 
     def shutdown(self):
@@ -87,3 +90,62 @@ class SimpleEngine(Engine):
             normalised_lines.append(" ".join(cleaned_tokens))
 
         return "\n".join(normalised_lines)
+    
+    def detect_blocks(self, text):
+        """
+        Deterministic block detection.
+        Turns the cleaned text into structural blocks:
+        - heading
+        - bullet_group
+        - paragraph
+        """
+
+        lines = text.split("\n")
+        blocks = []
+        buffer = []
+        current_type = None
+
+        def flush_buffer():
+            nonlocal buffer, current_type
+            if buffer:
+                blocks.append({
+                    "type": current_type,
+                    "content": "\n".join(buffer).strip()
+                })
+                buffer = []
+                current_type = None
+
+        for line in lines:
+            stripped = line.strip()
+
+            # Blank line → end current block
+            if stripped == "":
+                flush_buffer()
+                continue
+
+            # Heading block
+            if stripped.startswith("#"):
+                flush_buffer()
+                current_type = "heading"
+                buffer.append(stripped)
+                flush_buffer()
+                continue
+
+            # Bullet group block
+            if stripped.startswith("- "):
+                if current_type != "bullet_group":
+                    flush_buffer()
+                    current_type = "bullet_group"
+                buffer.append(stripped)
+                continue
+
+            # Paragraph block
+            if current_type != "paragraph":
+                flush_buffer()
+                current_type = "paragraph"
+            buffer.append(stripped)
+
+        # Flush final block
+        flush_buffer()
+
+        return blocks
