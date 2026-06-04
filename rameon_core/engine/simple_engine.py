@@ -18,8 +18,10 @@ class SimpleEngine(Engine):
 
         blocks = self.detect_blocks(input_data)
         chunks = self.chunk_blocks(blocks)
+        chunks = self.detect_intents(chunks)
 
         return self.pipeline.run(chunks)
+
 
 
     def shutdown(self):
@@ -180,5 +182,42 @@ class SimpleEngine(Engine):
         # Add final chunk
         if current_chunk["blocks"] or current_chunk["heading"]:
             chunks.append(current_chunk)
+
+        return chunks
+
+    def detect_intents(self, chunks):
+        """
+        Deterministic intent detection for MVP.
+        Assigns a simple intent label to each chunk.
+        """
+
+        for chunk in chunks:
+            heading = chunk["heading"] or ""
+            text = "\n".join(b["content"] for b in chunk["blocks"]).strip()
+
+            # Default intent
+            intent = "other"
+
+            # If chunk has a heading, use it
+            if heading:
+                intent = "heading"
+
+            # If chunk contains bullet groups
+            if any(b["type"] == "bullet_group" for b in chunk["blocks"]):
+                intent = "list"
+
+            # Instruction patterns
+            if text.lower().startswith(("how to", "steps", "do this", "follow")):
+                intent = "instruction"
+
+            # Definition patterns
+            if text.lower().startswith(("is defined as", "refers to", "means")):
+                intent = "definition"
+
+            # Explanation patterns
+            if text.endswith(".") and len(text.split()) > 8:
+                intent = "explanation"
+
+            chunk["intent"] = intent
 
         return chunks
