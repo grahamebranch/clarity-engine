@@ -21,7 +21,10 @@ class SimpleEngine(Engine):
         chunks = self.detect_intents(chunks)
         chunks = self.score_clarity(chunks)
 
-        return self.pipeline.run(chunks)
+        final_output = self.assemble_output(chunks)
+
+        return self.pipeline.run(final_output)
+
 
     def shutdown(self):
         pass
@@ -255,4 +258,57 @@ class SimpleEngine(Engine):
 
             # Clamp score
             score = max(0, min
-                        
+
+    def assemble_output(self, chunks):
+        """
+        Final output assembly for MVP.
+        Produces a clean, stable structure for downstream systems.
+        """
+
+        output = {
+            "chunks": []
+        }
+
+        for chunk in chunks:
+            assembled = {
+                "heading": chunk.get("heading"),
+                "intent": chunk.get("intent"),
+                "clarity_score": chunk.get("clarity_score"),
+                "blocks": [
+                    {
+                        "type": b["type"],
+                        "content": b["content"]
+                    }
+                    for b in chunk["blocks"]
+                ]
+            }
+            output["chunks"].append(assembled)
+
+        return output
+
+    def assemble_output(self, chunks):
+        """
+        Final output assembly for MVP.
+        Produces a clean, stable structure for downstream systems.
+        """
+
+        output = {
+            "chunks": []
+        }
+
+        for chunk in chunks:
+            assembled = {
+                "heading": chunk.get("heading"),
+                "intent": chunk.get("intent"),
+                "clarity_score": chunk.get("clarity_score"),
+                "blocks": [
+                    {
+                        "type": b["type"],
+                        "content": b["content"]
+                    }
+                    for b in chunk["blocks"]
+                ]
+            }
+            output["chunks"].append(assembled)
+
+        return output
