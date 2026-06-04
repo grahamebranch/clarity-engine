@@ -259,6 +259,11 @@ class SimpleEngine(Engine):
             # Clamp score
             score = max(0, min(100, score))
 
+            # Save score into chunk
+            chunk["clarity_score"] = score
+
+        return chunks
+
 
     def assemble_output(self, chunks):
         """
