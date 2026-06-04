@@ -257,7 +257,8 @@ class SimpleEngine(Engine):
                 score += 5
 
             # Clamp score
-            score = max(0, min
+            score = max(0, min(100, score))
+
 
     def assemble_output(self, chunks):
         """
