@@ -1,3 +1,5 @@
+import re
+
 from .engine import Engine
 from .context import EngineContext
 from .pipeline import Pipeline
@@ -25,7 +27,6 @@ class SimpleEngine(Engine):
         MVP: simple normalization placeholder.
         In your real version, keep your existing implementation.
         """
-        # Example: normalise line endings and strip trailing spaces
         lines = [line.rstrip() for line in text.splitlines()]
         return "\n".join(lines)
 
@@ -106,12 +107,11 @@ class SimpleEngine(Engine):
         Replace with your real scoring logic.
         """
         for c in chunks:
-            # Neutral placeholder score
             c["clarity_score"] = 60
         return chunks
 
     # ------------------------------------------------------------
-    # 7. DIS assembly
+    # 7. DIS-1 assembly
     # ------------------------------------------------------------
     def assemble_output(self, chunks: list[dict]) -> dict:
         """
@@ -208,7 +208,6 @@ class SimpleEngine(Engine):
         sections = self._el2_clarity_reorder(sections)
         sections = self._el2_final_coherence_pass(sections)
 
-        # Recompute document-level clarity
         scores = [
             s.get("clarity_score")
             for s in sections
@@ -226,7 +225,6 @@ class SimpleEngine(Engine):
         }
 
     # ---------- EL2 helpers ----------
-
     def _el2_get_heading(self, section: dict) -> str:
         h = section.get("heading") or ""
         return h.strip()
@@ -367,7 +365,6 @@ class SimpleEngine(Engine):
         sections = cleaned
 
         if len(sections) >= 2:
-            # Ensure last is conclusion-like if possible
             if not self._el2_is_conclusion(self._el2_get_heading(sections[-1])):
                 for i, s in enumerate(sections[:-1]):
                     if self._el2_is_conclusion(self._el2_get_heading(s)):
@@ -377,11 +374,77 @@ class SimpleEngine(Engine):
         return sections
 
     # ------------------------------------------------------------
-    # 10. Pipeline integration (returns DIS document)
+    # 10. DIS-1 → DIS-2 upgrade layer
+    # ------------------------------------------------------------
+    def upgrade_to_dis2(self, dis_document: dict) -> dict:
+        """
+        Upgrade DIS-1 to DIS-2: add stable section/block types and metadata.
+        """
+        sections_in = dis_document.get("sections", []) or []
+        sections_out: list[dict] = []
+
+        for s in sections_in:
+            heading = self._el2_get_heading(s)
+            blocks_in = s.get("blocks", []) or []
+
+            # classify section type
+            if heading and self._el2_is_intro(heading):
+                section_type = "introduction"
+            elif heading and self._el2_is_conclusion(heading):
+                section_type = "conclusion"
+            elif heading and self._el2_is_definition(heading):
+                section_type = "definition"
+            elif heading:
+                section_type = "body"
+            else:
+                section_type = "unnamed"
+
+            blocks_out: list[dict] = []
+            for b in blocks_in:
+                raw_type = b.get("type") or "paragraph"
+                if raw_type in ("paragraph", "text"):
+                    block_type = "paragraph"
+                elif raw_type in ("bullet", "bullet_group", "list"):
+                    block_type = "list"
+                elif raw_type in ("heading", "title"):
+                    block_type = "heading"
+                else:
+                    block_type = "paragraph"
+
+                b2 = dict(b)
+                b2["block_type"] = block_type
+                blocks_out.append(b2)
+
+            section_clarity = self._compute_section_clarity(blocks_out)
+
+            sections_out.append(
+                {
+                    "heading": heading or None,
+                    "section_type": section_type,
+                    "blocks": blocks_out,
+                    "clarity_score": section_clarity,
+                }
+            )
+
+        doc_clarity = self._compute_document_clarity(
+            [b for s in sections_out for b in s.get("blocks", [])]
+        )
+
+        return {
+            "version": "DIS-2",
+            "document_clarity_score": doc_clarity,
+            "sections": sections_out,
+            "meta": {
+                "source_version": dis_document.get("version", "DIS-1"),
+            },
+        }
+
+    # ------------------------------------------------------------
+    # 11. Pipeline integration (returns DIS-2 document)
     # ------------------------------------------------------------
     def run(self, input_data: str):
         """
-        Full MVP pipeline → returns a DIS document (after pipeline).
+        Full MVP pipeline → returns a DIS-2 document (after upgrade).
         """
 
         # Early normalization
@@ -400,7 +463,7 @@ class SimpleEngine(Engine):
         # Clarity scoring
         chunks = self.score_clarity(chunks)
 
-        # Assemble DIS
+        # Assemble DIS-1
         dis_document = self.assemble_output(chunks)
 
         # Edition Logic v1 (cleanup)
@@ -409,5 +472,8 @@ class SimpleEngine(Engine):
         # Edition Logic v2 (structure + semantics + clarity shaping)
         edited_document = self.apply_edition_logic_v2(edited_document)
 
+        # DIS-1 → DIS-2 upgrade
+        dis2_document = self.upgrade_to_dis2(edited_document)
+
         # Pass through pipeline
-        return self.pipeline.run(edited_document)
+        return self.pipeline.run(dis2_document)
