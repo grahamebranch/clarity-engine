@@ -197,7 +197,9 @@ class SimpleEngine(Engine):
      # ------------------------------------------------------------
     # 7. Final assembly (DIS document)
     # ------------------------------------------------------------
-    def assemble_output(self, chunks):
+    def apply_edition_logic(self, dis_document: dict) -> dict:
+         ...
+
         """
         Build a minimal DIS (Document Interpretation Structure) object.
         This is the canonical document model for all downstream systems.
@@ -257,8 +259,7 @@ class SimpleEngine(Engine):
         # Clarity scoring
         chunks = self.score_clarity(chunks)
 
-        # Final assembly → DIS document
         dis_document = self.assemble_output(chunks)
+        edited_document = self.apply_edition_logic(dis_document)
+        return self.pipeline.run(edited_document)
 
-        # Pass through pipeline (identity for now)
-        return self.pipeline.run(dis_document)
