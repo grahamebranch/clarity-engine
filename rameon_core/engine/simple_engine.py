@@ -34,8 +34,9 @@ class SimpleEngine(Engine):
         return "\n".join(lines)
 
     def group_bullets(self, text: str) -> str:
-    ...
+    # TODO: keep your real implementation here
     return text
+
 
     # ------------------------------------------------------------
     # 2b. Heading detection + section splitting
