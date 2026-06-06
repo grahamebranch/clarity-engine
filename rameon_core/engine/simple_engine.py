@@ -436,15 +436,300 @@ class SimpleEngine(Engine):
             "sections": sections_out,
             "meta": {
                 "source_version": dis_document.get("version", "DIS-1"),
+                "validation_repairs": [],
             },
         }
 
     # ------------------------------------------------------------
-    # 11. Pipeline integration (returns DIS-2 document)
+    # 11. DIS-2 strict validation (with clamping + repair metadata)
+    # ------------------------------------------------------------
+    def validate_dis2(self, dis2_document: dict) -> dict:
+        """
+        Strict DIS-2 validation:
+        - ensures required keys
+        - enforces shapes
+        - clamps clarity scores to 0–100
+        - records all repairs in meta['validation_repairs'].
+        """
+        doc = dict(dis2_document) if dis2_document is not None else {}
+        repairs: list[dict] = []
+
+        # Ensure top-level keys
+        if "version" not in doc:
+            repairs.append(
+                {"level": "document", "field": "version", "action": "added", "value": "DIS-2"}
+            )
+            doc["version"] = "DIS-2"
+        if doc.get("version") != "DIS-2":
+            repairs.append(
+                {
+                    "level": "document",
+                    "field": "version",
+                    "action": "normalized",
+                    "original": doc.get("version"),
+                    "value": "DIS-2",
+                }
+            )
+            doc["version"] = "DIS-2"
+
+        sections = doc.get("sections")
+        if not isinstance(sections, list):
+            repairs.append(
+                {
+                    "level": "document",
+                    "field": "sections",
+                    "action": "normalized",
+                    "original": sections,
+                    "value": [],
+                }
+            )
+            sections = []
+        validated_sections: list[dict] = []
+
+        for idx, s in enumerate(sections):
+            vs, s_repairs = self._validate_dis2_section(s, idx)
+            validated_sections.append(vs)
+            repairs.extend(s_repairs)
+
+        doc["sections"] = validated_sections
+
+        # Recompute and clamp document clarity
+        all_blocks = [b for s in validated_sections for b in s.get("blocks", [])]
+        doc_clarity_raw = self._compute_document_clarity(all_blocks)
+        doc_clarity, clarity_repairs = self._normalize_clarity_score(
+            doc.get("document_clarity_score"), doc_clarity_raw, level="document"
+        )
+        if clarity_repairs:
+            repairs.extend(clarity_repairs)
+        doc["document_clarity_score"] = doc_clarity
+
+        # Attach/extend meta.validation_repairs
+        meta = doc.get("meta") or {}
+        existing_repairs = meta.get("validation_repairs") or []
+        meta["validation_repairs"] = existing_repairs + repairs
+        doc["meta"] = meta
+
+        return doc
+
+    def _validate_dis2_section(self, section: dict, index: int) -> tuple[dict, list[dict]]:
+        repairs: list[dict] = []
+        s = dict(section) if section is not None else {}
+
+        heading = s.get("heading")
+        if heading is not None and not isinstance(heading, str):
+            repairs.append(
+                {
+                    "level": "section",
+                    "index": index,
+                    "field": "heading",
+                    "action": "normalized",
+                    "original": heading,
+                    "value": str(heading),
+                }
+            )
+            heading = str(heading)
+        s["heading"] = heading if heading else None
+
+        section_type = s.get("section_type")
+        valid_types = {"introduction", "definition", "body", "conclusion", "unnamed"}
+        if section_type not in valid_types:
+            original = section_type
+            # Reclassify based on heading if needed
+            h = (heading or "").strip()
+            if h and self._el2_is_intro(h):
+                section_type = "introduction"
+            elif h and self._el2_is_conclusion(h):
+                section_type = "conclusion"
+            elif h and self._el2_is_definition(h):
+                section_type = "definition"
+            elif h:
+                section_type = "body"
+            else:
+                section_type = "unnamed"
+            repairs.append(
+                {
+                    "level": "section",
+                    "index": index,
+                    "field": "section_type",
+                    "action": "normalized",
+                    "original": original,
+                    "value": section_type,
+                }
+            )
+        s["section_type"] = section_type
+
+        blocks = s.get("blocks")
+        if not isinstance(blocks, list):
+            repairs.append(
+                {
+                    "level": "section",
+                    "index": index,
+                    "field": "blocks",
+                    "action": "normalized",
+                    "original": blocks,
+                    "value": [],
+                }
+            )
+            blocks = []
+        validated_blocks: list[dict] = []
+        for b_idx, b in enumerate(blocks):
+            vb, b_repairs = self._validate_dis2_block(b, index, b_idx)
+            validated_blocks.append(vb)
+            repairs.extend(b_repairs)
+        s["blocks"] = validated_blocks
+
+        # Recompute and clamp section clarity
+        section_clarity_raw = self._compute_section_clarity(validated_blocks)
+        section_clarity, clarity_repairs = self._normalize_clarity_score(
+            s.get("clarity_score"),
+            section_clarity_raw,
+            level="section",
+            index=index,
+        )
+        if clarity_repairs:
+            repairs.extend(clarity_repairs)
+        s["clarity_score"] = section_clarity
+
+        return s, repairs
+
+    def _validate_dis2_block(
+        self, block: dict, section_index: int, block_index: int
+    ) -> tuple[dict, list[dict]]:
+        repairs: list[dict] = []
+        b = dict(block) if block is not None else {}
+
+        content = b.get("content")
+        if content is None:
+            repairs.append(
+                {
+                    "level": "block",
+                    "section_index": section_index,
+                    "block_index": block_index,
+                    "field": "content",
+                    "action": "added",
+                    "value": "",
+                }
+            )
+            content = ""
+        elif not isinstance(content, str):
+            repairs.append(
+                {
+                    "level": "block",
+                    "section_index": section_index,
+                    "block_index": block_index,
+                    "field": "content",
+                    "action": "normalized",
+                    "original": content,
+                    "value": str(content),
+                }
+            )
+            content = str(content)
+        b["content"] = content
+
+        block_type = b.get("block_type") or b.get("type") or "paragraph"
+        if block_type not in ("paragraph", "list", "heading"):
+            repairs.append(
+                {
+                    "level": "block",
+                    "section_index": section_index,
+                    "block_index": block_index,
+                    "field": "block_type",
+                    "action": "normalized",
+                    "original": block_type,
+                    "value": "paragraph",
+                }
+            )
+            block_type = "paragraph"
+        b["block_type"] = block_type
+
+        clarity_raw = b.get("clarity_score")
+        clarity, clarity_repairs = self._normalize_clarity_score(
+            clarity_raw,
+            default=60,
+            level="block",
+            section_index=section_index,
+            block_index=block_index,
+        )
+        if clarity_repairs:
+            repairs.extend(clarity_repairs)
+        b["clarity_score"] = clarity
+
+        return b, repairs
+
+    def _normalize_clarity_score(
+        self,
+        value,
+        default: int | float = 0,
+        level: str = "document",
+        index: int | None = None,
+        section_index: int | None = None,
+        block_index: int | None = None,
+    ) -> tuple[int, list[dict]]:
+        """
+        Clamp clarity scores to 0–100 and record any repairs.
+        """
+        repairs: list[dict] = []
+
+        def make_ctx():
+            ctx = {"level": level}
+            if index is not None:
+                ctx["index"] = index
+            if section_index is not None:
+                ctx["section_index"] = section_index
+            if block_index is not None:
+                ctx["block_index"] = block_index
+            return ctx
+
+        if not isinstance(value, (int, float)):
+            if value is not None:
+                r = make_ctx()
+                r.update(
+                    {
+                        "field": "clarity_score",
+                        "action": "normalized_type",
+                        "original": value,
+                        "value": default,
+                    }
+                )
+                repairs.append(r)
+            score = float(default)
+        else:
+            score = float(value)
+
+        original_score = score
+        if score < 0:
+            r = make_ctx()
+            r.update(
+                {
+                    "field": "clarity_score",
+                    "action": "clamped_min",
+                    "original": original_score,
+                    "value": 0,
+                }
+            )
+            repairs.append(r)
+            score = 0.0
+        elif score > 100:
+            r = make_ctx()
+            r.update(
+                {
+                    "field": "clarity_score",
+                    "action": "clamped_max",
+                    "original": original_score,
+                    "value": 100,
+                }
+            )
+            repairs.append(r)
+            score = 100.0
+
+        return int(score), repairs
+
+    # ------------------------------------------------------------
+    # 12. Pipeline integration (returns validated DIS-2 document)
     # ------------------------------------------------------------
     def run(self, input_data: str):
         """
-        Full MVP pipeline → returns a DIS-2 document (after upgrade).
+        Full MVP pipeline → returns a validated DIS-2 document.
         """
 
         # Early normalization
@@ -474,6 +759,9 @@ class SimpleEngine(Engine):
 
         # DIS-1 → DIS-2 upgrade
         dis2_document = self.upgrade_to_dis2(edited_document)
+
+        # Strict DIS-2 validation (with clamping + repair metadata)
+        dis2_document = self.validate_dis2(dis2_document)
 
         # Pass through pipeline
         return self.pipeline.run(dis2_document)
