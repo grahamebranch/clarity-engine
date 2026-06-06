@@ -19,6 +19,9 @@ class SimpleEngine(Engine):
         """
         self.config = config or {}
 
+    def shutdown(self):
+    pass
+
     # ------------------------------------------------------------
     # 2. Early normalization
     # ------------------------------------------------------------
