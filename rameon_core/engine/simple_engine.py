@@ -34,16 +34,23 @@ class SimpleEngine(Engine):
         return "\n".join(lines)
 
     def group_bullets(self, text: str) -> str:
-        """
-        MVP: placeholder that returns text unchanged.
-        Keep/replace with your real bullet-grouping logic.
-        """
-        return text
+    ...
+    return text
+
+    # ------------------------------------------------------------
+    # 2b. Heading detection + section splitting
+    # ------------------------------------------------------------
+    def is_heading(self, line: str) -> bool:
+        ... (paste full method here)
+
+    def split_into_sections(self, text: str) -> list[dict]:
+        ... (paste full method here)
 
     # ------------------------------------------------------------
     # 3. Block detection
     # ------------------------------------------------------------
     def detect_blocks(self, text: str) -> list[dict]:
+
         """
         MVP block detection: split on blank lines into paragraph blocks.
         Replace with your real block detection if you already have it.
@@ -739,8 +746,16 @@ class SimpleEngine(Engine):
         input_data = self.normalize_headings(input_data)
         input_data = self.group_bullets(input_data)
 
-        # Block detection
-        blocks = self.detect_blocks(input_data)
+        # Section + block detection
+        sections_raw = self.split_into_sections(input_data)
+
+        blocks = []
+        for sec in sections_raw:
+            sec_blocks = self.detect_blocks("\n".join(sec["raw_lines"]))
+            for b in sec_blocks:
+                b["heading"] = sec["heading"]
+            blocks.extend(sec_blocks)
+
 
         # Chunking
         chunks = self.chunk_blocks(blocks)
