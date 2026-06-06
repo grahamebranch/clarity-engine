@@ -194,20 +194,30 @@ class SimpleEngine(Engine):
 
         return chunks
 
-    # ------------------------------------------------------------
-    # 7. Final assembly (minimal JSON structure)
+     # ------------------------------------------------------------
+    # 7. Final assembly (DIS document)
     # ------------------------------------------------------------
     def assemble_output(self, chunks):
         """
-        Final output assembly for MVP.
-        Produces a clean, stable JSON-like structure for downstream systems.
+        Build a minimal DIS (Document Interpretation Structure) object.
+        This is the canonical document model for all downstream systems.
         """
-        output = {
-            "chunks": []
+
+        # Compute document-level clarity score (simple average)
+        clarity_scores = [
+            c.get("clarity_score", 0)
+            for c in chunks
+        ]
+        document_clarity = int(sum(clarity_scores) / len(clarity_scores)) if clarity_scores else 0
+
+        dis_document = {
+            "version": "DIS-1",
+            "document_clarity_score": document_clarity,
+            "sections": []
         }
 
         for chunk in chunks:
-            assembled = {
+            section = {
                 "heading": chunk.get("heading"),
                 "intent": chunk.get("intent"),
                 "clarity_score": chunk.get("clarity_score"),
@@ -219,17 +229,18 @@ class SimpleEngine(Engine):
                     for b in chunk["blocks"]
                 ]
             }
-            output["chunks"].append(assembled)
+            dis_document["sections"].append(section)
 
-        return output
+        return dis_document
 
     # ------------------------------------------------------------
-    # 8. Pipeline integration
+    # 8. Pipeline integration (returns DIS document)
     # ------------------------------------------------------------
     def run(self, input_data: str):
         """
-        Full MVP pipeline: text → blocks → chunks → intents → scores → JSON structure.
+        Full MVP pipeline → returns a DIS document.
         """
+
         # Early normalization
         input_data = self.normalize_headings(input_data)
         input_data = self.group_bullets(input_data)
@@ -246,8 +257,8 @@ class SimpleEngine(Engine):
         # Clarity scoring
         chunks = self.score_clarity(chunks)
 
-        # Final assembly (structured JSON)
-        final_output = self.assemble_output(chunks)
+        # Final assembly → DIS document
+        dis_document = self.assemble_output(chunks)
 
-        # Hand off to pipeline (which can further process or just pass through)
-        return self.pipeline.run(final_output)
+        # Pass through pipeline (identity for now)
+        return self.pipeline.run(dis_document)
