@@ -101,39 +101,7 @@ class SimpleEngine(Engine):
 
         return sections
 
-        # ------------------------------------------------------------
-        # 3. Block detection
-        # ------------------------------------------------------------
-        def detect_blocks(self, text: str) -> list[dict]:
-
-            """
-            MVP block detection: split on blank lines into paragraph blocks.
-            Replace with your real block detection if you already have it.
-            """
-            blocks: list[dict] = []
-            current: list[str] = []
-
-            def flush():
-                if current:
-                    content = "\n".join(current).strip()
-                    if content:
-                        blocks.append(
-                            {
-                                "type": "paragraph",
-                                "content": content,
-                            }
-                        )
-                    current.clear()
-
-            for line in text.splitlines():
-                if line.strip():
-                    current.append(line)
-                else:
-                    flush()
-            flush()
-            return blocks
-
-        # ------------------------------------------------------------
+    # ------------------------------------------------------------
     # 3. Block detection (paragraphs + bullets)
     # ------------------------------------------------------------
     def detect_blocks(self, text: str) -> list[dict]:
@@ -177,6 +145,7 @@ class SimpleEngine(Engine):
 
         return out
 
+
     # ------------------------------------------------------------
     # 4. Chunking (groups blocks into chunks)
     # ------------------------------------------------------------
@@ -198,6 +167,7 @@ class SimpleEngine(Engine):
             })
 
         return chunks
+
 
 
     # ------------------------------------------------------------
