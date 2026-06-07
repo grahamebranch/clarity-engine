@@ -39,29 +39,29 @@ class SimpleEngine(Engine):
 
 
     def is_heading(self, line: str) -> bool:
-    """
-    Practical heading detection for DIS-1:
-    - Non-empty
-    - Starts with a letter or number
-    - Allows punctuation (e.g., '?', ':', '-', etc.)
-    - Rejects bullets
-    """
-    if not isinstance(line, str):
-        return False
+        """
+        Practical heading detection for DIS-1:
+        - Non-empty
+        - Starts with a letter or number
+        - Allows punctuation (e.g., '?', ':', '-', etc.)
+        - Rejects bullets
+        """
+        if not isinstance(line, str):
+            return False
 
-    text = line.strip()
-    if not text:
-        return False
+        text = line.strip()
+        if not text:
+            return False
 
-    # Reject bullets
-    if text.startswith(("-", "*", "•")):
-        return False
+        # Reject bullets
+        if text.startswith(("-", "*", "•")):
+            return False
 
-    # Must start with a letter or number
-    if not re.match(r"^[A-Za-z0-9]", text):
-        return False
+        # Must start with a letter or number
+        if not re.match(r"^[A-Za-z0-9]", text):
+            return False
 
-    return True
+        return True
 
 
 
