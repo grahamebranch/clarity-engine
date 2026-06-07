@@ -310,6 +310,88 @@ class SimpleEngine(Engine):
             "sections": sections,
         }
 
+
+    # ------------------------------------------------------------
+    # Block Detection v2 (grouped upgrade)
+    # ------------------------------------------------------------
+    def detect_blocks_v2(self, raw_lines: list[str]) -> list[dict]:
+        """
+        Smarter block detection:
+        - Detect bullet lists (-, *, •)
+        - Detect numbered steps (1., 2., 3.)
+        - Split multi-paragraph text
+        - Preserve semantic grouping
+        """
+
+        blocks = []
+        buffer = []
+        mode = None  # "paragraph", "bullet", "numbered"
+
+        bullet_markers = ("- ", "* ", "• ")
+        numbered_pattern = re.compile(r"^\d+\.\s+")
+
+        def flush_buffer():
+            nonlocal buffer, mode
+            if not buffer:
+                return
+
+            content = "\n".join(buffer).strip()
+            if not content:
+                buffer = []
+                mode = None
+                return
+
+            if mode == "bullet":
+                blocks.append({
+                    "type": "bullet_group",
+                    "items": buffer.copy(),
+                    "block_type": "list"
+                })
+            elif mode == "numbered":
+                blocks.append({
+                    "type": "numbered_group",
+                    "items": buffer.copy(),
+                    "block_type": "steps"
+                })
+            else:
+                blocks.append({
+                    "type": "paragraph",
+                    "content": content,
+                    "block_type": "paragraph"
+                })
+
+            buffer = []
+            mode = None
+
+        for line in raw_lines:
+            stripped = line.strip()
+
+            if not stripped:
+                flush_buffer()
+                continue
+
+            if any(stripped.startswith(m) for m in bullet_markers):
+                if mode not in ("bullet", None):
+                    flush_buffer()
+                mode = "bullet"
+                buffer.append(stripped)
+                continue
+
+            if numbered_pattern.match(stripped):
+                if mode not in ("numbered", None):
+                    flush_buffer()
+                mode = "numbered"
+                buffer.append(stripped)
+                continue
+
+            if mode not in ("paragraph", None):
+                flush_buffer()
+            mode = "paragraph"
+            buffer.append(stripped)
+
+        flush_buffer()
+        return blocks
+
     # ------------------------------------------------------------
     # 9. Edition Logic v2 (structural + semantic + clarity shaping)
     # ------------------------------------------------------------
@@ -392,7 +474,16 @@ class SimpleEngine(Engine):
         return cleaned
 
     def _el2_merge_micro_sections(self, sections: list[dict]) -> list[dict]:
+        """
+        Revised: preserve user structure unless a section is *extremely* small.
+        A section is considered micro only if:
+        - it has fewer than 10 characters of text, AND
+        - it has no bullet groups, AND
+        - it is not a definition, intro, or conclusion
+        """
+
         merged: list[dict] = []
+
         for s in sections:
             blocks = s.get("blocks", []) or []
             text = " ".join(
@@ -400,12 +491,23 @@ class SimpleEngine(Engine):
                 if isinstance(b.get("content"), str)
             ).strip()
 
-            is_bullet_heavy = any(b.get("type") == "bullet_group" for b in blocks)
-            is_micro = len(text) < 40 and not is_bullet_heavy
+            # NEW: semantic protection
+            heading = self._el2_get_heading(s)
+            is_semantic = (
+                self._el2_is_intro(heading)
+                or self._el2_is_definition(heading)
+                or self._el2_is_conclusion(heading)
+            )
+
+            # NEW: extremely small threshold
+            is_micro = len(text) < 10 and not is_semantic
 
             if is_micro and merged:
+                # merge into previous
                 prev = merged[-1]
                 prev["blocks"].extend(blocks)
+
+                # clarity score propagation
                 prev_score = prev.get("clarity_score")
                 cur_score = s.get("clarity_score")
                 if isinstance(cur_score, (int, float)):
@@ -415,6 +517,9 @@ class SimpleEngine(Engine):
                 merged.append(s)
 
         return merged
+
+
+
 
     def _el2_semantic_reorder(self, sections: list[dict]) -> list[dict]:
         intros: list[dict] = []
@@ -838,10 +943,106 @@ class SimpleEngine(Engine):
 
         return int(score), repairs
 
-        # ------------------------------------------------------------
+    # ------------------------------------------------------------
+    # 10. Edition Logic v3 (balanced, semantic + clarity shaping)
+    # ------------------------------------------------------------
+    def apply_edition_logic_v3(self, dis_document: dict) -> dict:
+        sections = dis_document.get("sections", []) or []
+
+        # Reuse EL2 base shaping
+        sections = self._el2_fix_heading_hierarchy(sections)
+        sections = self._el2_merge_micro_sections(sections)
+
+        # EL3-specific passes
+        sections = self._el3_infer_missing_headings(sections)
+        sections = self._el3_semantic_order(sections)
+        sections = self._el3_clarity_weighted_order(sections)
+        sections = self._el3_coherence_pass(sections)
+
+        scores = [
+            s.get("clarity_score")
+            for s in sections
+            if isinstance(s.get("clarity_score"), (int, float))
+        ]
+        if scores:
+            doc_clarity = int(sum(scores) / len(scores))
+        else:
+            doc_clarity = dis_document.get("document_clarity_score", 0)
+
+        return {
+            "version": dis_document.get("version", "DIS-1"),
+            "document_clarity_score": doc_clarity,
+            "sections": sections,
+        }
+
+
+    # ------------------------------------------------------------
+    # EL3 helpers (balanced)
+    # ------------------------------------------------------------
+    def _el3_infer_missing_headings(self, sections: list[dict]) -> list[dict]:
+        result = []
+        for s in sections:
+            heading = s.get("heading")
+            if not heading:
+                blocks = s.get("blocks") or []
+                if blocks:
+                    first = blocks[0]
+                    content = first.get("heading") or first.get("content") or ""
+                    if isinstance(content, str):
+                        content = content.strip()
+                        if content:
+                            heading = content.split("\n", 1)[0][:80]
+            s2 = dict(s)
+            s2["heading"] = heading
+            result.append(s2)
+        return result
+
+    def _el3_semantic_order(self, sections: list[dict]) -> list[dict]:
+        def score_section(s: dict) -> int:
+            h = (s.get("heading") or "").lower()
+            if any(k in h for k in ("overview", "summary", "introduction", "intro", "purpose")):
+                return 0
+            if any(k in h for k in ("steps", "process", "how", "procedure")):
+                return 1
+            if any(k in h for k in ("notes", "remarks", "details")):
+                return 2
+            if any(k in h for k in ("conclusion", "wrap up", "next steps")):
+                return 3
+            return 1
+
+        indexed = list(enumerate(sections))
+        indexed.sort(key=lambda t: (score_section(t[1]), t[0]))
+        return [s for _, s in indexed]
+
+    def _el3_clarity_weighted_order(self, sections: list[dict]) -> list[dict]:
+        indexed = list(enumerate(sections))
+        indexed.sort(
+            key=lambda t: (
+                -1 * (t[1].get("clarity_score") or 0),
+                t[0],
+            )
+        )
+        return [s for _, s in indexed]
+
+    def _el3_coherence_pass(self, sections: list[dict]) -> list[dict]:
+        result = []
+        for s in sections:
+            blocks = s.get("blocks") or []  
+            if not isinstance(blocks, list):
+                blocks = []
+            if not blocks and not (s.get("heading") or "").strip():
+                continue
+            s2 = dict(s)
+            s2["blocks"] = blocks
+            result.append(s2)
+        return result
+
+
+    # ------------------------------------------------------------
     # 12. Pipeline integration (returns validated DIS-2 document)
     # ------------------------------------------------------------
     def run(self, input_data: str):
+
         import inspect
         print(">>> USING SIMPLEENGINE FROM:", inspect.getfile(self.__class__))
 
@@ -855,13 +1056,18 @@ class SimpleEngine(Engine):
         blocks = []
         for sec in sections_raw:
             # Remove empty lines
-            sec["raw_lines"] = [l for l in sec["raw_lines"] if l.strip()]
+            raw_lines = [l for l in sec["raw_lines"] if l.strip()]
 
-            # Detect blocks and attach heading
-            sec_blocks = self.detect_blocks("\n".join(sec["raw_lines"]))
+            # Detect blocks for this section
+            sec_blocks = self.detect_blocks_v2(raw_lines)
+
+            # Attach heading to each block
             for b in sec_blocks:
                 b["heading"] = sec["heading"]
+
+            # Add to global block list
             blocks.extend(sec_blocks)
+
 
         # Chunking
         chunks = self.chunk_blocks(blocks)
@@ -875,11 +1081,8 @@ class SimpleEngine(Engine):
         # Assemble DIS-1
         dis_document = self.assemble_output(chunks)
 
-        # Edition Logic v1 (cleanup)
-        edited_document = self.apply_edition_logic(dis_document)
-
-        # Edition Logic v2 (structure + semantics + clarity shaping)
-        edited_document = self.apply_edition_logic_v2(edited_document)
+        # Edition Logic v3 (balanced)
+        edited_document = self.apply_edition_logic_v3(dis_document)
 
         # DIS-1 → DIS-2 upgrade
         dis2_document = self.upgrade_to_dis2(edited_document)
