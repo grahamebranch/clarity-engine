@@ -63,37 +63,39 @@ class SimpleEngine(Engine):
 
         return True
 
-
-
     def split_into_sections(self, text: str) -> list[dict]:
         """
-        Splits text into sections based on detected headings.
-        Each section has:
-        - heading (or None)
-        - raw_lines (list of lines belonging to the section)
+        Split text into sections using is_heading().
+        Each section is:
+        {
+            "heading": str | None,
+            "raw_lines": [str]
+        }
         """
-        lines = text.splitlines()
         sections = []
-        current_section = {"heading": None, "raw_lines": []}
+        current = {
+            "heading": None,
+            "raw_lines": []
+        }
 
-        for line in lines:
+        for line in text.splitlines():
             stripped = line.strip()
 
             if self.is_heading(stripped):
                 # Start a new section
-                if current_section["raw_lines"]:
-                    sections.append(current_section)
+                if current["raw_lines"]:
+                    sections.append(current)
 
-                current_section = {
+                current = {
                     "heading": stripped,
                     "raw_lines": []
                 }
             else:
-                current_section["raw_lines"].append(line)
+                current["raw_lines"].append(line)
 
-        # Flush last section
-        if current_section["raw_lines"] or current_section["heading"]:
-            sections.append(current_section)
+        # Final section
+        if current["raw_lines"] or current["heading"]:
+            sections.append(current)
 
         return sections
 
