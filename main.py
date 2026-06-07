@@ -1,4 +1,4 @@
-from rameon_core.engine.simple_engine import SimpleEngine
+from rameon_core.engine.simple_engine_old import SimpleEngine
 from rameon_core.engine.context import EngineContext
 
 

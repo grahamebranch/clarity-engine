@@ -2,7 +2,7 @@ import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 
 
-from rameon_core.engine.simple_engine import SimpleEngine
+from rameon_core.engine.simple_engine_old import SimpleEngine
 
 test_text = """Introduction
 This is the intro text.
