@@ -841,10 +841,13 @@ class SimpleEngine(Engine):
 
         return int(score), repairs
 
-    # ------------------------------------------------------------
+        # ------------------------------------------------------------
     # 12. Pipeline integration (returns validated DIS-2 document)
     # ------------------------------------------------------------
     def run(self, input_data: str):
+        import inspect
+        print(">>> USING SIMPLEENGINE FROM:", inspect.getfile(self.__class__))
+
         """
         Full MVP pipeline → returns a validated DIS-2 document.
         """
@@ -862,7 +865,6 @@ class SimpleEngine(Engine):
             for b in sec_blocks:
                 b["heading"] = sec["heading"]
             blocks.extend(sec_blocks)
-
 
         # Chunking
         chunks = self.chunk_blocks(blocks)
