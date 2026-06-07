@@ -32,7 +32,7 @@ class SimpleEngine(Engine):
     def group_bullets(self, text: str) -> str:
         return text
 
-    # ------------------------------------------------------------
+        # ------------------------------------------------------------
     # 2b. Heading detection + section splitting
     # ------------------------------------------------------------
     def is_heading(self, line: str) -> bool:
