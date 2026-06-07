@@ -201,48 +201,43 @@ class SimpleEngine(Engine):
     # ------------------------------------------------------------
     def assemble_output(self, chunks: list[dict]) -> dict:
         """
-        Assemble a multi‑section DIS‑1 document.
-        Each chunk already contains:
-        - heading (may be None)
-        - block_type
-        - text
-        - intent
-        - clarity_score
+        Minimal DIS-1 assembler:
+        - Groups chunks by heading
+        - Produces sections with blocks
         """
 
-        sections: list[dict] = []
-        current_section = {
-            "heading": None,
-            "blocks": []
-        }
+        sections = []
+        current = None
 
-        for c in chunks:
-            heading = c.get("heading")
+        for ch in chunks:
+            heading = ch.get("heading")
 
             # Start a new section when heading changes
-            if heading and heading != current_section["heading"]:
-                # Flush previous section if it has content
-                if current_section["blocks"]:
-                    current_section["clarity_score"] = self._compute_section_clarity(
-                        current_section["blocks"]
-                    )
-                    sections.append(current_section)
-
-                # Start new section
-                current_section = {
+            if current is None or current["heading"] != heading:
+                current = {
                     "heading": heading,
                     "blocks": []
                 }
+                sections.append(current)
 
-            # Add block to current section
-            current_section["blocks"].append(
-                {
-                    "type": c.get("block_type", "paragraph"),
-                    "content": c.get("text", ""),
-                    "intent": c.get("intent"),
-                    "clarity_score": c.get("clarity_score"),
-                }
-            )
+            # Add block
+            current["blocks"].append({
+                "content": ch["content"],
+                "block_type": ch["block_type"],
+                "intent": ch["intent"],
+                "clarity_score": ch["clarity_score"]
+            })
+
+        return {
+            "version": "DIS-1",
+            "sections": sections,
+            "meta": {
+                "source_version": "DIS-1",
+                "validation_repairs": []
+            }
+        }
+
+
 
         # Flush last section
         if current_section["blocks"]:
@@ -850,10 +845,6 @@ class SimpleEngine(Engine):
         import inspect
         print(">>> USING SIMPLEENGINE FROM:", inspect.getfile(self.__class__))
 
-        """
-        Full MVP pipeline → returns a validated DIS-2 document.
-        """
-
         # Early normalization
         input_data = self.normalize_headings(input_data)
         input_data = self.group_bullets(input_data)
@@ -863,6 +854,10 @@ class SimpleEngine(Engine):
 
         blocks = []
         for sec in sections_raw:
+            # Remove empty lines
+            sec["raw_lines"] = [l for l in sec["raw_lines"] if l.strip()]
+
+            # Detect blocks and attach heading
             sec_blocks = self.detect_blocks("\n".join(sec["raw_lines"]))
             for b in sec_blocks:
                 b["heading"] = sec["heading"]
