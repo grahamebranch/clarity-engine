@@ -1,4 +1,7 @@
-from rameon_core.simple_engine import SimpleEngine
+import sys, os
+sys.path.append(os.path.dirname(__file__))
+
+from rameon_core.engine.simple_engine import SimpleEngine
 
 test_text = """Introduction
 This is the intro text.
@@ -13,7 +16,7 @@ Step 2
 
 def main():
     engine = SimpleEngine()
-    engine.load({})  # optional config
+    engine.load({})
 
     result = engine.run(test_text)
 
