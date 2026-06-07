@@ -42,10 +42,72 @@ class SimpleEngine(Engine):
     # 2b. Heading detection + section splitting
     # ------------------------------------------------------------
     def is_heading(self, line: str) -> bool:
-        ... (paste full method here)
+        """
+        Moderate heading detection:
+        - 1–8 words
+        - Starts with capital letter
+        - No trailing punctuation except '?'
+        - Not a bullet
+        """
+        if not isinstance(line, str):
+            return False
+
+        text = line.strip()
+        if not text:
+            return False
+
+        # Reject bullets
+        if text.startswith(("-", "*", "•")):
+            return False
+
+        # Word count check
+        words = text.split()
+        if not (1 <= len(words) <= 8):
+            return False
+
+        # Must start with capital letter
+        if not words[0][0].isupper():
+            return False
+
+        # Allowed punctuation
+        if text.endswith((".", ":", ";", "!", ",")):
+            return False
+
+        # Accept '?' (e.g., "What is the purpose?")
+        return True
+
 
     def split_into_sections(self, text: str) -> list[dict]:
-        ... (paste full method here)
+        """
+        Splits text into sections based on detected headings.
+        Each section has:
+        - heading (or None)
+        - raw_lines (list of lines belonging to the section)
+        """
+        lines = text.splitlines()
+        sections = []
+        current_section = {"heading": None, "raw_lines": []}
+
+        for line in lines:
+            stripped = line.strip()
+
+            if self.is_heading(stripped):
+                # Start a new section
+                if current_section["raw_lines"]:
+                    sections.append(current_section)
+
+                current_section = {
+                    "heading": stripped,
+                    "raw_lines": []
+                }
+            else:
+                current_section["raw_lines"].append(line)
+
+        # Flush last section
+        if current_section["raw_lines"] or current_section["heading"]:
+            sections.append(current_section)
+
+        return sections
 
     # ------------------------------------------------------------
     # 3. Block detection
@@ -126,12 +188,41 @@ class SimpleEngine(Engine):
     # ------------------------------------------------------------
     def assemble_output(self, chunks: list[dict]) -> dict:
         """
-        Assemble a minimal DIS-1 document from chunks.
-        MVP: single section containing all chunks as blocks.
+        Assemble a multi‑section DIS‑1 document.
+        Each chunk already contains:
+        - heading (may be None)
+        - block_type
+        - text
+        - intent
+        - clarity_score
         """
-        blocks = []
+
+        sections: list[dict] = []
+        current_section = {
+            "heading": None,
+            "blocks": []
+        }
+
         for c in chunks:
-            blocks.append(
+            heading = c.get("heading")
+
+            # Start a new section when heading changes
+            if heading and heading != current_section["heading"]:
+                # Flush previous section if it has content
+                if current_section["blocks"]:
+                    current_section["clarity_score"] = self._compute_section_clarity(
+                        current_section["blocks"]
+                    )
+                    sections.append(current_section)
+
+                # Start new section
+                current_section = {
+                    "heading": heading,
+                    "blocks": []
+                }
+
+            # Add block to current section
+            current_section["blocks"].append(
                 {
                     "type": c.get("block_type", "paragraph"),
                     "content": c.get("text", ""),
@@ -140,18 +231,22 @@ class SimpleEngine(Engine):
                 }
             )
 
-        dis_document = {
+        # Flush last section
+        if current_section["blocks"]:
+            current_section["clarity_score"] = self._compute_section_clarity(
+                current_section["blocks"]
+            )
+            sections.append(current_section)
+
+        # Compute document clarity
+        all_blocks = [b for s in sections for b in s["blocks"]]        
+        doc_clarity = self._compute_document_clarity(all_blocks)
+
+        return {
             "version": "DIS-1",
-            "document_clarity_score": self._compute_document_clarity(blocks),
-            "sections": [
-                {
-                    "heading": None,
-                    "blocks": blocks,
-                    "clarity_score": self._compute_section_clarity(blocks),
-                }
-            ],
+            "document_clarity_score": doc_clarity,
+            "sections": sections,
         }
-        return dis_document
 
     def _compute_document_clarity(self, blocks: list[dict]) -> int:
         scores = [
