@@ -38,43 +38,31 @@ class SimpleEngine(Engine):
         return text
 
 
-    # ------------------------------------------------------------
-    # 2b. Heading detection + section splitting
-    # ------------------------------------------------------------
     def is_heading(self, line: str) -> bool:
-        """
-        Moderate heading detection:
-        - 1–8 words
-        - Starts with capital letter
-        - No trailing punctuation except '?'
-        - Not a bullet
-        """
-        if not isinstance(line, str):
-            return False
+    """
+    Practical heading detection for DIS-1:
+    - Non-empty
+    - Starts with a letter or number
+    - Allows punctuation (e.g., '?', ':', '-', etc.)
+    - Rejects bullets
+    """
+    if not isinstance(line, str):
+        return False
 
-        text = line.strip()
-        if not text:
-            return False
+    text = line.strip()
+    if not text:
+        return False
 
-        # Reject bullets
-        if text.startswith(("-", "*", "•")):
-            return False
+    # Reject bullets
+    if text.startswith(("-", "*", "•")):
+        return False
 
-        # Word count check
-        words = text.split()
-        if not (1 <= len(words) <= 8):
-            return False
+    # Must start with a letter or number
+    if not re.match(r"^[A-Za-z0-9]", text):
+        return False
 
-        # Must start with capital letter
-        if not words[0][0].isupper():
-            return False
+    return True
 
-        # Allowed punctuation
-        if text.endswith((".", ":", ";", "!", ",")):
-            return False
-
-        # Accept '?' (e.g., "What is the purpose?")
-        return True
 
 
     def split_into_sections(self, text: str) -> list[dict]:
