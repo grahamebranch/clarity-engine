@@ -22,23 +22,26 @@ class SimpleEngine(Engine):
     def shutdown(self):
         pass
 
-    # ------------------------------------------------------------
+        # ------------------------------------------------------------
     # 2. Early normalization
     # ------------------------------------------------------------
     def normalize_headings(self, text: str) -> str:
-        """
-        MVP: simple normalization placeholder.
-        In your real version, keep your existing implementation.
-        """
         lines = [line.rstrip() for line in text.splitlines()]
         return "\n".join(lines)
 
     def group_bullets(self, text: str) -> str:
-        # TODO: keep your real implementation here
         return text
 
-
+    # ------------------------------------------------------------
+    # 2b. Heading detection + section splitting
+    # ------------------------------------------------------------
     def is_heading(self, line: str) -> bool:
+        """
+        A heading is any non-empty line that:
+        - is not a bullet
+        - starts with a letter or number
+        - does NOT end with a period (to avoid treating sentences as headings)
+        """
         if not isinstance(line, str):
             return False
 
@@ -54,13 +57,17 @@ class SimpleEngine(Engine):
         if not re.match(r"^[A-Za-z0-9]", text):
             return False
 
+        # Reject sentences
+        if text.endswith("."):
+            return False
+
         return True
 
 
     def split_into_sections(self, text: str) -> list[dict]:
         """
         Split text into sections using is_heading().
-        Each section is:
+        Each section:
         {
             "heading": str | None,
             "raw_lines": [str]
@@ -76,10 +83,11 @@ class SimpleEngine(Engine):
             stripped = line.strip()
 
             if self.is_heading(stripped):
-                # Start a new section
-                if current["raw_lines"]:
+                # Close previous section
+                if current["heading"] is not None or current["raw_lines"]:
                     sections.append(current)
 
+                # Start new section
                 current = {
                     "heading": stripped,
                     "raw_lines": []
@@ -87,61 +95,110 @@ class SimpleEngine(Engine):
             else:
                 current["raw_lines"].append(line)
 
-        # Final section
-        if current["raw_lines"] or current["heading"]:
+        # Append final section
+        if current["heading"] is not None or current["raw_lines"]:
             sections.append(current)
 
         return sections
 
-    # ------------------------------------------------------------
-    # 3. Block detection
+        # ------------------------------------------------------------
+        # 3. Block detection
+        # ------------------------------------------------------------
+        def detect_blocks(self, text: str) -> list[dict]:
+
+            """
+            MVP block detection: split on blank lines into paragraph blocks.
+            Replace with your real block detection if you already have it.
+            """
+            blocks: list[dict] = []
+            current: list[str] = []
+
+            def flush():
+                if current:
+                    content = "\n".join(current).strip()
+                    if content:
+                        blocks.append(
+                            {
+                                "type": "paragraph",
+                                "content": content,
+                            }
+                        )
+                    current.clear()
+
+            for line in text.splitlines():
+                if line.strip():
+                    current.append(line)
+                else:
+                    flush()
+            flush()
+            return blocks
+
+        # ------------------------------------------------------------
+    # 3. Block detection (paragraphs + bullets)
     # ------------------------------------------------------------
     def detect_blocks(self, text: str) -> list[dict]:
-
         """
-        MVP block detection: split on blank lines into paragraph blocks.
-        Replace with your real block detection if you already have it.
+        Minimal MVP block detector:
+        - Splits on blank lines
+        - Identifies bullets vs paragraphs
         """
-        blocks: list[dict] = []
-        current: list[str] = []
-
-        def flush():
-            if current:
-                content = "\n".join(current).strip()
-                if content:
-                    blocks.append(
-                        {
-                            "type": "paragraph",
-                            "content": content,
-                        }
-                    )
-                current.clear()
+        blocks = []
+        current = []
 
         for line in text.splitlines():
-            if line.strip():
-                current.append(line)
+            stripped = line.strip()
+
+            if not stripped:
+                # End of block
+                if current:
+                    blocks.append("\n".join(current))
+                    current = []
+                continue
+
+            current.append(stripped)
+
+        # Final block
+        if current:
+            blocks.append("\n".join(current))
+
+        # Convert to block dicts
+        out = []
+        for b in blocks:
+            if b.startswith(("-", "*", "•")):
+                block_type = "bullet"
             else:
-                flush()
-        flush()
-        return blocks
+                block_type = "paragraph"
+
+            out.append({
+                "type": block_type,
+                "content": b,
+                "block_type": block_type
+            })
+
+        return out
 
     # ------------------------------------------------------------
-    # 4. Chunking
+    # 4. Chunking (groups blocks into chunks)
     # ------------------------------------------------------------
     def chunk_blocks(self, blocks: list[dict]) -> list[dict]:
         """
-        MVP chunking: one chunk per block.
+        MVP chunker:
+        - Each block becomes its own chunk
+        - Later versions can merge blocks by semantic similarity
         """
-        chunks: list[dict] = []
-        for i, b in enumerate(blocks):
-            chunks.append(
-                {
-                    "id": f"chunk-{i+1}",
-                    "text": b.get("content", ""),
-                    "block_type": b.get("type", "paragraph"),
-                }
-            )
+        chunks = []
+
+        for b in blocks:
+            chunks.append({
+                "content": b["content"],
+                "block_type": b["block_type"],
+                "heading": b.get("heading"),
+                "intent": None,          # filled later
+                "clarity_score": None    # filled later
+            })
+
         return chunks
+
 
     # ------------------------------------------------------------
     # 5. Intent detection
