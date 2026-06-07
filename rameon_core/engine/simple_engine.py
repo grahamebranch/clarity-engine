@@ -36,12 +36,6 @@ class SimpleEngine(Engine):
     # 2b. Heading detection + section splitting
     # ------------------------------------------------------------
     def is_heading(self, line: str) -> bool:
-        """
-        A heading is any non-empty line that:
-        - is not a bullet
-        - starts with a letter or number
-        - does NOT end with a period (to avoid treating sentences as headings)
-        """
         if not isinstance(line, str):
             return False
 
@@ -53,6 +47,10 @@ class SimpleEngine(Engine):
         if text.startswith(("-", "*", "•")):
             return False
 
+        # Reject lines like "Step 1", "Part 2", "Chapter 3"
+        if re.match(r".*\b\d+$", text):
+            return False
+
         # Must start with a letter or number
         if not re.match(r"^[A-Za-z0-9]", text):
             return False
@@ -62,6 +60,7 @@ class SimpleEngine(Engine):
             return False
 
         return True
+
 
 
     def split_into_sections(self, text: str) -> list[dict]:
@@ -81,6 +80,8 @@ class SimpleEngine(Engine):
 
         for line in text.splitlines():
             stripped = line.strip()
+            print("LINE:", repr(line), "→ is_heading:", self.is_heading(line.strip()))
+
 
             if self.is_heading(stripped):
                 # Close previous section
@@ -99,6 +100,7 @@ class SimpleEngine(Engine):
         if current["heading"] is not None or current["raw_lines"]:
             sections.append(current)
 
+        print("SECTIONS RAW:", sections)
         return sections
 
     # ------------------------------------------------------------
@@ -142,7 +144,7 @@ class SimpleEngine(Engine):
                 "content": b,
                 "block_type": block_type
             })
-
+        print("BLOCKS:", out)
         return out
 
 
