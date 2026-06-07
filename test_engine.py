@@ -1,5 +1,6 @@
 import sys, os
-sys.path.append(os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(__file__))
+
 
 from rameon_core.engine.simple_engine import SimpleEngine
 
