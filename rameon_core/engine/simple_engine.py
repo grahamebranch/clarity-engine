@@ -39,13 +39,6 @@ class SimpleEngine(Engine):
 
 
     def is_heading(self, line: str) -> bool:
-        """
-        Practical heading detection for DIS-1:
-        - Non-empty
-        - Starts with a letter or number
-        - Allows punctuation (e.g., '?', ':', '-', etc.)
-        - Rejects bullets
-        """
         if not isinstance(line, str):
             return False
 
@@ -62,6 +55,7 @@ class SimpleEngine(Engine):
             return False
 
         return True
+
 
     def split_into_sections(self, text: str) -> list[dict]:
         """
