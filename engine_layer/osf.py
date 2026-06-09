@@ -1,20 +1,42 @@
-"""
-OSF (Output Structure Framework) — v1.0
+""""
+OSF (Output Structure Framework) - v1.1
 
 This module defines the structural skeleton for all outputs.
-It enforces section order, nesting, visibility, and annex placement.
-
-Status: Scaffold
+It ensures that every output follows a predictable, domain-specific structure.
 """
 
 class OSF:
     def __init__(self):
-        pass
+        # Structure registry (populated later)
+        self.structures = {}
 
-    def load_structure(self, domain_name: str, edition: str):
-        """Return the OSF skeleton for the given domain + edition."""
-        raise NotImplementedError("TODO: Implement OSF loader")
+    def register_structure(self, domain_name: str, edition: str, structure: dict):
+        """Register an OSF structure for a given domain + edition."""
+        key = f"{domain_name}:{edition}"
+        self.structures[key] = structure
 
-    def apply_structure(self, instruction_set: dict):
-        """Shape the output according to the OSF skeleton."""
-        raise NotImplementedError("TODO: Implement OSF structuring")
+    def load_structure(self, domain_name: str, edition: str) -> dict:
+        """Return the OSF structure for a given domain + edition."""
+        key = f"{domain_name}:{edition}"
+        if key not in self.structures:
+            raise ValueError(f"Unknown structure for domain/edition: {key}")
+        return self.structures[key]
+
+    def apply_structure(self, instruction_set: dict, structure: dict) -> dict:
+        """
+        Shape the output according to the OSF skeleton.
+        This is the first functional version (OSF-1).
+        """
+
+        shaped_output = {
+            "version": "OSF-1",
+            "domain": instruction_set.get("domain"),
+            "request": instruction_set.get("request"),
+            "structure": structure,
+            "flows": instruction_set.get("flows", {}),
+            "templates": instruction_set.get("templates", {}),
+            "constraints": instruction_set.get("constraints", {}),
+            "annex_rules": instruction_set.get("annex_rules", {}),
+        }
+
+        return shaped_output
