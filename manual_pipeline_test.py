@@ -11,6 +11,11 @@ from engine_layer.dis import DIS
 from engine_layer.osf import OSF
 from engine_layer.rameon import RameonEngine
 from engine_layer.governance import Governance
+from structure_packs.teaching_structure import get_teaching_structure
+from template_packs.teaching_templates import get_teaching_templates
+from flow_packs.teaching_flow import get_teaching_flow_logic
+
+
 
 # Import your real domain pack
 from domain_packs.teaching_domain import get_domain
@@ -32,13 +37,8 @@ def run_manual_pipeline_test():
     dis.register_domain("teaching", teaching_domain)
 
     # ---------------------------------------------------------
-    # 3. Register a simple OSF structure for teaching
-    #    (we will replace this with a real structure pack later)
-    # ---------------------------------------------------------
-    teaching_structure = {
-        "sections": ["warmup", "controlled_practice", "freer_practice", "reflection"]
-    }
-
+    # 3. Register the real Teaching OSF Structure Pack
+    teaching_structure = get_teaching_structure()
     osf.register_structure("teaching", "v1", teaching_structure)
 
     # ---------------------------------------------------------
@@ -64,13 +64,20 @@ def run_manual_pipeline_test():
     )
 
     # ---------------------------------------------------------
-    # 7. Run Rameon
+    # 7. Run Rameon (with templates + flow logic)
     # ---------------------------------------------------------
+    templates = get_teaching_templates()
+    flow_logic = get_teaching_flow_logic()
+
     executed_output = rameon.execute(
         instruction_set=instruction_set,
         structure=structure,
-        domain_rules=domain_rules
+        domain_rules=domain_rules,
+        templates=templates,
+        flow_logic=flow_logic
     )
+
+
 
     # ---------------------------------------------------------
     # 8. Run Governance validations
