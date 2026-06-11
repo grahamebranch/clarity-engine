@@ -188,42 +188,6 @@ class SimpleEngine(Engine):
     def _compute_section_clarity(self, blocks: list[dict]) -> int:
         return self._compute_document_clarity(blocks)
 
-    # ------------------------------------------------------------
-    # 8. Edition Logic v1 (cleanup)
-    # ------------------------------------------------------------
-    def apply_edition_logic(self, dis_document: dict) -> dict:
-        sections = []
-        for s in dis_document.get("sections", []):
-            blocks = s.get("blocks", []) or []
-            cleaned_blocks = []
-            for b in blocks:
-                content = b.get("content")
-                if isinstance(content, str) and content.strip():
-                    cleaned_blocks.append(b)
-            if cleaned_blocks:
-                s2 = dict(s)
-                s2["blocks"] = cleaned_blocks
-                s2["clarity_score"] = self._compute_section_clarity(cleaned_blocks)
-                sections.append(s2)
-
-        if not sections:
-            sections = [
-                {
-                    "heading": None,
-                    "blocks": [],
-                    "clarity_score": 0,
-                }
-            ]
-
-        doc_clarity = self._compute_document_clarity(
-            [b for s in sections for b in s.get("blocks", [])]
-        )
-
-        return {
-            "version": dis_document.get("version", "DIS-1"),
-            "document_clarity_score": doc_clarity,
-            "sections": sections,
-        }
 
     # ------------------------------------------------------------
     # 9. Edition Logic v2 (structural + semantic + clarity shaping)
@@ -402,7 +366,385 @@ class SimpleEngine(Engine):
         return sections
 
     # ------------------------------------------------------------
-    # 10. DIS-1 → DIS-2 upgrade layer
+    # 10.1 Edition Logic v3 (expression shaping: short mode, etc.)
+    # ------------------------------------------------------------
+
+    def _el3_detect_mode(self, user_request: str) -> str:
+        req = (user_request or "").lower()
+
+        # --- Mode triggers ---
+        clear_triggers = [
+            "clear", "make it clear", "clean", "clean up", "clarify"
+        ]
+
+        precise_triggers = [
+            "precise", "make it precise", "exact", "more exact", "tighten"
+        ]
+
+        simple_triggers = [
+            "simple", "simpler", "make it simple",
+            "easy", "easier", "plain language"
+        ]
+
+        short_triggers = [
+            "short", "shorter", "brief", "condense", "summary",
+            "summarise", "summarize", "tldr", "make it short"
+        ]
+
+        formal_triggers = [
+            "formal", "make it formal", "professional tone",
+            "business tone", "official", "corporate"
+        ]
+
+
+        # --- Priority order ---
+        if any(t in req for t in clear_triggers):
+            return "clear"
+
+        if any(t in req for t in precise_triggers):
+            return "precise"
+
+        if any(t in req for t in simple_triggers):
+            return "simple"
+
+        if any(t in req for t in short_triggers):
+            return "short"
+        
+        if any(t in req for t in formal_triggers):
+            return "formal"
+
+
+        return "default"
+
+
+
+    def _el3_apply_short_mode(self, dis_document: dict) -> dict:
+        new_sections = []
+
+        for sec in dis_document.get("sections", []):
+            blocks = sec.get("blocks", []) or []
+            new_blocks = []
+
+            for blk in blocks:
+                text = blk.get("content", "") or ""
+                if not isinstance(text, str) or not text.strip():
+                    new_blocks.append(blk)
+                    continue
+
+                sentences = [s.strip() for s in text.split(".") if s.strip()]
+                compressed = []
+
+                for s in sentences:
+                    fillers = [
+                        "in order to", "basically", "actually", "really",
+                        "in fact", "as a matter of fact", "essentially",
+                        "it is important to note that"
+                    ]
+                    for f in fillers:
+                        s = s.replace(f, "")
+
+                    if "," in s:
+                        s = s.split(",")[0]
+
+                    if s.strip():
+                        compressed.append(s.strip())
+
+                blk["content"] = (
+                    ". ".join(compressed) + "." if compressed else text
+                )
+                new_blocks.append(blk)
+
+            sec["blocks"] = new_blocks
+            new_sections.append(sec)
+
+        dis_document["sections"] = new_sections
+        return dis_document
+
+
+
+    def _el3_apply_simple_mode(self, dis_document: dict) -> dict:
+        simple_map = {
+            "utilize": "use",
+            "leverage": "use",
+            "facilitate": "help",
+            "approximately": "about",
+            "demonstrate": "show",
+            "indicate": "show",
+            "implement": "apply",
+            "methodology": "method",
+            "objective": "goal",
+            "commence": "start",
+            "terminate": "end",
+            "prioritize": "focus on",
+            "significant": "important",
+            "numerous": "many",
+            "subsequently": "afterwards",
+            "consequently": "so",
+            "therefore": "so",
+        }
+
+        weak_openers = [
+            "however", "moreover", "furthermore", "in addition",
+            "nevertheless", "nonetheless", "consequently"
+        ]
+
+        new_sections = []
+
+        for sec in dis_document.get("sections", []):
+            blocks = sec.get("blocks", []) or []
+            new_blocks = []
+
+            for blk in blocks:
+                text = blk.get("content", "") or ""
+                if not isinstance(text, str) or not text.strip():
+                    new_blocks.append(blk)
+                    continue
+
+                processed = text
+
+                for complex_word, simple_word in simple_map.items():
+                    processed = processed.replace(complex_word, simple_word)
+                    processed = processed.replace(complex_word.capitalize(), simple_word.capitalize())
+
+                sentences = [s.strip() for s in processed.split(".") if s.strip()]
+                cleaned = []
+
+                for s in sentences:
+                    lowered = s.lower()
+                    for opener in weak_openers:
+                        if lowered.startswith(opener + " "):
+                            s = s[len(opener) + 1:].strip()
+                    cleaned.append(s)
+
+                blk["content"] = ". ".join(cleaned) + "."
+                new_blocks.append(blk)
+
+            sec["blocks"] = new_blocks
+            new_sections.append(sec)
+
+        dis_document["sections"] = new_sections
+        return dis_document
+
+
+    def _el3_apply_clear_mode(self, dis_document: dict) -> dict:
+        hedges = [
+            "kind of", "sort of", "maybe", "perhaps", "possibly",
+            "it seems", "it appears", "i think", "i believe",
+            "in my opinion", "should be noted that"
+        ]
+
+        weak_words = [
+            "very", "really", "quite", "somewhat", "fairly",
+            "basically", "actually", "literally"
+        ]
+
+        redundant_openers = [
+            "in conclusion", "to summarize", "overall", "in summary"
+        ]
+
+        new_sections = []
+
+        for sec in dis_document.get("sections", []):
+            blocks = sec.get("blocks", []) or []
+            new_blocks = []
+
+            for blk in blocks:
+                text = blk.get("content", "") or ""
+                if not isinstance(text, str) or not text.strip():
+                    new_blocks.append(blk)
+                    continue
+
+                processed = text
+
+                for h in hedges:
+                    processed = processed.replace(h, "")
+
+                for w in weak_words:
+                    processed = processed.replace(" " + w + " ", " ")
+
+                sentences = [s.strip() for s in processed.split(".") if s.strip()]
+                cleaned = []
+
+                for s in sentences:
+                    lowered = s.lower()
+                    for opener in redundant_openers:
+                        if lowered.startswith(opener + " "):
+                            s = s[len(opener) + 1:].strip()
+                    cleaned.append(s)
+
+                blk["content"] = ". ".join(cleaned) + "."
+                new_blocks.append(blk)
+
+            sec["blocks"] = new_blocks
+            new_sections.append(sec)
+
+        dis_document["sections"] = new_sections
+        return dis_document
+
+
+    def _el3_apply_precise_mode(self, dis_document: dict) -> dict:
+        vague_terms = [
+            "things", "stuff", "various", "several", "some", "a bit",
+            "a number of", "kind of", "sort of", "aspects", "areas", "issues"
+        ]
+
+        weak_verbs = {
+            "do": "perform",
+            "make": "create",
+            "get": "obtain",
+            "put": "place",
+            "show": "demonstrate",
+            "use": "apply",
+        }
+
+        soft_quantifiers = [
+            "somewhat", "slightly", "fairly", "relatively", "kind of", "sort of"
+        ]
+
+        new_sections = []
+
+        for sec in dis_document.get("sections", []):
+            blocks = sec.get("blocks", []) or []
+            new_blocks = []
+
+            for blk in blocks:
+                text = blk.get("content", "") or ""
+                if not isinstance(text, str) or not text.strip():
+                    new_blocks.append(blk)
+                    continue
+
+                processed = text
+
+                for term in vague_terms:
+                    processed = processed.replace(term, "")
+
+                for weak, strong in weak_verbs.items():
+                    processed = processed.replace(f" {weak} ", f" {strong} ")
+                    processed = processed.replace(f" {weak.capitalize()} ", f" {strong.capitalize()} ")
+
+                for q in soft_quantifiers:
+                    processed = processed.replace(q, "")
+
+                processed = " ".join(processed.split())
+
+                blk["content"] = processed
+                new_blocks.append(blk)
+
+            sec["blocks"] = new_blocks
+            new_sections.append(sec)
+
+        dis_document["sections"] = new_sections
+        return dis_document
+    
+        def _el3_apply_formal_mode(self, dis_document: dict) -> dict:
+            """
+            Formal mode elevates tone, removes contractions, replaces casual
+            vocabulary, and enforces a professional register while preserving
+            meaning and structure.
+            """
+
+            contractions = {
+                "can't": "cannot",
+                "won't": "will not",
+                "don't": "do not",
+                "doesn't": "does not",
+                "isn't": "is not",
+                "aren't": "are not",
+                "couldn't": "could not",
+                "shouldn't": "should not",
+                "wouldn't": "would not",
+                "i'm": "I am",
+                "we're": "we are",
+                "they're": "they are",
+                "it's": "it is",
+                "that's": "that is",
+            }
+
+            casual_to_formal = {
+                "get": "obtain",
+                "give": "provide",
+                "show": "demonstrate",
+                "tell": "inform",
+                "fix": "resolve",
+                "start": "commence",
+                "end": "conclude",
+                "help": "assist",
+                "use": "utilize",
+                "need": "require",
+            }
+
+            formal_openers = [
+                "In addition,", "Furthermore,", "Moreover,", "Consequently,", "Therefore,"
+            ]
+
+            new_sections = []
+
+            for sec in dis_document.get("sections", []):
+                blocks = sec.get("blocks", []) or []
+                new_blocks = []
+
+                for blk in blocks:
+                    text = blk.get("content", "") or ""
+                    if not isinstance(text, str) or not text.strip():
+                        new_blocks.append(blk)
+                        continue
+
+                    processed = text
+
+                    # Expand contractions
+                    for c, full in contractions.items():
+                        processed = processed.replace(c, full)
+                        processed = processed.replace(c.capitalize(), full.capitalize())
+
+                    # Replace casual vocabulary
+                    for casual, formal in casual_to_formal.items():
+                        processed = processed.replace(f" {casual} ", f" {formal} ")
+                        processed = processed.replace(f" {casual.capitalize()} ", f" {formal.capitalize()} ")
+
+                    # Add formal openers to short sentences
+                    sentences = [s.strip() for s in processed.split(".") if s.strip()]
+                    enhanced = []
+
+                    for s in sentences:
+                        if len(s.split()) <= 6:
+                            s = f"{formal_openers[0]} {s}"
+                        enhanced.append(s)
+
+                    blk["content"] = ". ".join(enhanced) + "."
+                    new_blocks.append(blk)
+
+                sec["blocks"] = new_blocks
+                new_sections.append(sec)
+
+            dis_document["sections"] = new_sections
+            return dis_document
+
+
+    def apply_edition_logic_v3(self, dis_document: dict, context: dict) -> dict:
+        mode = self._el3_detect_mode(context.get("user_request", ""))
+
+        if mode == "short":
+            return self._el3_apply_short_mode(dis_document)
+
+        if mode == "simple":
+            return self._el3_apply_simple_mode(dis_document)
+
+        if mode == "clear":
+            return self._el3_apply_clear_mode(dis_document)
+
+        if mode == "precise":
+            return self._el3_apply_precise_mode(dis_document)
+        
+        if mode == "formal":
+            return self._el3_apply_formal_mode(dis_document)
+
+
+        return dis_document
+
+
+
+    # ------------------------------------------------------------
+    # 10.2 DIS-1 → DIS-2 upgrade layer
     # ------------------------------------------------------------
     def upgrade_to_dis2(self, dis_document: dict) -> dict:
         sections_in = dis_document.get("sections", []) or []
@@ -737,27 +1079,51 @@ class SimpleEngine(Engine):
     # 12. Pipeline integration (returns validated DIS-2 document)
     # ------------------------------------------------------------
     def run(self, input_data: str):
+
+        import inspect
+        print(">>> USING SIMPLEENGINE FROM:", inspect.getfile(self.__class__))
+
+        # Early normalization
         input_data = self.normalize_headings(input_data)
         input_data = self.group_bullets(input_data)
 
+        # Section + block detection
         sections_raw = self.split_into_sections(input_data)
 
         blocks = []
         for sec in sections_raw:
-            sec["raw_lines"] = [l for l in sec["raw_lines"] if l.strip()]
-            sec_blocks = self.detect_blocks("\n".join(sec["raw_lines"]))
+            raw_lines = [l for l in sec["raw_lines"] if l.strip()]
+            sec_blocks = self.detect_blocks_v2(raw_lines)
+
             for b in sec_blocks:
                 b["heading"] = sec["heading"]
+
             blocks.extend(sec_blocks)
 
+        # Chunking
         chunks = self.chunk_blocks(blocks)
+
+        # Intent detection
         chunks = self.detect_intents(chunks)
+
+        # Clarity scoring
         chunks = self.score_clarity(chunks)
 
+        # Assemble DIS-1
         dis_document = self.assemble_output(chunks)
-        edited_document = self.apply_edition_logic(dis_document)
-        edited_document = self.apply_edition_logic_v2(edited_document)
+
+        # Edition Logic v2 (structural)
+        dis_document = self.apply_edition_logic_v2(dis_document)
+
+        # Edition Logic v3 (expression shaping)
+        context = {"user_request": input_data}
+        edited_document = self.apply_edition_logic_v3(dis_document, context)
+
+        # DIS-1 → DIS-2 upgrade
         dis2_document = self.upgrade_to_dis2(edited_document)
+
+        # Strict DIS-2 validation (with clamping + repair metadata)
         dis2_document = self.validate_dis2(dis2_document)
 
+        # Pass through pipeline
         return self.pipeline.run(dis2_document)
