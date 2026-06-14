@@ -1,49 +1,49 @@
 from fastapi import FastAPI
-from fastapi.responses import FileResponse, Response
-from fastapi.staticfiles import StaticFiles
-import json
-import os
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
+# -------------------------------------------------
+# FastAPI app
+# -------------------------------------------------
 app = FastAPI()
 
-# --- Serve UI folder ---
-app.mount("/", StaticFiles(directory="ui", html=True), name="ui")
+# Allow UI → Backend communication inside Codespaces
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
+# -------------------------------------------------
+# Request model
+# -------------------------------------------------
+class ClarityRequest(BaseModel):
+    text: str
 
-# --- GENERATE ENDPOINT (real engine connection) ---
-@app.post("/generate")
-def generate(payload: dict):
-    text = payload.get("text", "")
+# -------------------------------------------------
+# Dummy clarity engine (replace with your real engine)
+# -------------------------------------------------
+def run_clarity_engine(text: str):
+    # Placeholder logic — your real engine goes here
+    improved = text.capitalize()
+    sections = [{"title": "Main Idea", "content": improved}]
+    trace = ["Engine started", "Engine finished"]
+    quality = {"score": 0.8}
 
-    # --- IMPORT YOUR ENGINE ---
-    from simple_engine import SimpleEngine
-    engine = SimpleEngine()
+    return improved, sections, trace, quality
 
-    # --- RUN THE ENGINE ---
-    result = engine.run(text)
+# -------------------------------------------------
+# API endpoint
+# -------------------------------------------------
+@app.post("/clarity")
+def clarity_endpoint(payload: ClarityRequest):
+    improved, sections, trace, quality = run_clarity_engine(payload.text)
 
-    # --- RETURN ENGINE OUTPUT ---
     return {
-        "output": result.get("final_text", ""),
-        "sections": result.get("sections", []),
-        "trace": result.get("trace", []),
-        "quality": result.get("quality", {})
+        "improved_text": improved,
+        "sections": sections,
+        "trace": trace,
+        "quality": quality,
     }
-
-
-# --- ANALYTICS ENDPOINT ---
-@app.post("/analytics")
-def analytics(event: dict):
-    with open("analytics.log", "a") as f:
-        f.write(json.dumps(event) + "\n")
-    return {"ok": True}
-
-
-# --- ANALYTICS LOG VIEWER (for dashboard) ---
-@app.get("/analytics-log")
-def analytics_log():
-    if not os.path.exists("analytics.log"):
-        return Response("", media_type="text/plain")
-
-    with open("analytics.log") as f:
-        return Response(f.read(), media_type="text/plain")
