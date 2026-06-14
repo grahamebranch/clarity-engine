@@ -40,7 +40,7 @@ class ClarityRequest(BaseModel):
 # -------------------------------------------------
 def run_clarity_engine(text: str):
     engine = SimpleEngine()
-    engine.load()  # loads config (even if empty)
+    engine.load(text)
     return engine.pipeline.run(text)
 
 
