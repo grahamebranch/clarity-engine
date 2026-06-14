@@ -9,10 +9,14 @@ from pydantic import BaseModel
 # -------------------------------------------------
 app = FastAPI()
 
-# Allow UI → Backend communication inside Codespaces
+# -------------------------------------------------
+# CORS (Codespaces-safe configuration)
+# -------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://zany-computing-machine-gx47prv67g97fwpgv-5500.app.github.dev"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -35,7 +39,7 @@ def run_clarity_engine(text: str):
     return improved, sections, trace, quality
 
 # -------------------------------------------------
-# OPTIONS handler (fixes 401 preflight)
+# OPTIONS handler (must be ABOVE the POST route)
 # -------------------------------------------------
 @app.options("/clarity")
 def clarity_options():

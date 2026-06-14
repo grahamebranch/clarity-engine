@@ -1,3 +1,5 @@
+console.log("SCRIPT VERSION 99");
+
 document.getElementById("runButton").addEventListener("click", async () => {
     const inputText = document.getElementById("inputText").value;
 
