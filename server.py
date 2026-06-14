@@ -1,18 +1,16 @@
-print(">>> LOADING SERVER.PY <<<")
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+print(">>> USING UPDATED SERVER.PY WITH WILDCARD CORS <<<")
+
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://*.app.github.dev",
-        "https://*.github.dev"
-    ],
-    allow_origin_regex=r"https://.*\.app\.github\.dev",
+    allow_origins=["*"],
+    allow_origin_regex=".*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,10 +25,6 @@ def run_clarity_engine(text: str):
     trace = ["Engine started", "Engine finished"]
     quality = {"score": 0.8}
     return improved, sections, trace, quality
-
-@app.options("/clarity")
-def clarity_options():
-    return {}
 
 @app.post("/clarity")
 def clarity_endpoint(payload: ClarityRequest):
