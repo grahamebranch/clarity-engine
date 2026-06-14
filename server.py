@@ -1,12 +1,14 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 print(">>> USING UPDATED SERVER.PY WITH WILDCARD CORS <<<")
 
-
 app = FastAPI()
 
+# -------------------------------------------------
+# CORS (Codespaces‑safe)
+# -------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,9 +18,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# -------------------------------------------------
+# Request model
+# -------------------------------------------------
 class ClarityRequest(BaseModel):
     text: str
 
+# -------------------------------------------------
+# Dummy clarity engine
+# -------------------------------------------------
 def run_clarity_engine(text: str):
     improved = text.capitalize()
     sections = [{"title": "Main Idea", "content": improved}]
@@ -26,6 +34,23 @@ def run_clarity_engine(text: str):
     quality = {"score": 0.8}
     return improved, sections, trace, quality
 
+# -------------------------------------------------
+# **EXPLICIT OPTIONS ROUTE (Fixes Codespaces CORS)**
+# -------------------------------------------------
+@app.options("/clarity")
+async def options_clarity():
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
+
+# -------------------------------------------------
+# POST /clarity
+# -------------------------------------------------
 @app.post("/clarity")
 def clarity_endpoint(payload: ClarityRequest):
     improved, sections, trace, quality = run_clarity_engine(payload.text)
