@@ -1,9 +1,18 @@
+print(">>> USING UPDATED SERVER.PY WITH REAL CLARITY ENGINE <<<")
+
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-print(">>> USING UPDATED SERVER.PY WITH WILDCARD CORS <<<")
+# -------------------------------------------------
+# Import the REAL Clarity Engine
+# -------------------------------------------------
+from rameon_core.engine.simple_engine import SimpleEngine
 
+
+# -------------------------------------------------
+# FastAPI app
+# -------------------------------------------------
 app = FastAPI()
 
 # -------------------------------------------------
@@ -18,24 +27,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # -------------------------------------------------
 # Request model
 # -------------------------------------------------
 class ClarityRequest(BaseModel):
     text: str
 
-# -------------------------------------------------
-# Dummy clarity engine
-# -------------------------------------------------
-def run_clarity_engine(text: str):
-    improved = text.capitalize()
-    sections = [{"title": "Main Idea", "content": improved}]
-    trace = ["Engine started", "Engine finished"]
-    quality = {"score": 0.8}
-    return improved, sections, trace, quality
 
 # -------------------------------------------------
-# **EXPLICIT OPTIONS ROUTE (Fixes Codespaces CORS)**
+# Real Clarity Engine wrapper
+# -------------------------------------------------
+def run_clarity_engine(text: str):
+    """
+    Calls the real Clarity Engine pipeline.
+    Returns: improved_text, sections, trace, quality
+    """
+    return run_pipeline(text)
+
+
+# -------------------------------------------------
+# Explicit OPTIONS route (Fixes Codespaces CORS)
 # -------------------------------------------------
 @app.options("/clarity")
 async def options_clarity():
@@ -47,6 +59,7 @@ async def options_clarity():
             "Access-Control-Allow-Headers": "*",
         }
     )
+
 
 # -------------------------------------------------
 # POST /clarity
