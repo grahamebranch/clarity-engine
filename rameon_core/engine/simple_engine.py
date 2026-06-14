@@ -8,33 +8,32 @@ from .pipeline import Pipeline
 
 
 class SimpleEngine(Engine):
-    class SimpleEngine(Engine):
 
-        def __init__(self):
-            # ------------------------------------------------------------
-            # REAL MVP PIPELINE
-            # ------------------------------------------------------------
-            from structure_packs.dis2_structure_detector import DIS2StructureDetector
-            from structure_packs.dis3_block_detector import DIS3BlockDetector
-            from structure_packs.dis4_semantic_unit_detector import DIS4SemanticUnitDetector
+    def __init__(self):
+        # ------------------------------------------------------------
+        # REAL MVP PIPELINE
+        # ------------------------------------------------------------
+        from structure_packs.dis2_structure_detector import DIS2StructureDetector
+        from structure_packs.dis3_block_detector import DIS3BlockDetector
+        from structure_packs.dis4_semantic_unit_detector import DIS4SemanticUnitDetector
 
-            from edition_logic.el2_clarity_reorder import EL2ClarityReorder
-            from edition_logic.el3_expression_shaping import EL3ExpressionShaping
-            from edition_logic.el4_semantic_fusion import EL4SemanticFusion
+        from edition_logic.el2_clarity_reorder import EL2ClarityReorder
+        from edition_logic.el3_expression_shaping import EL3ExpressionShaping
+        from edition_logic.el4_semantic_fusion import EL4SemanticFusion
 
-            self.pipeline = Pipeline(
-                stages=[
-                    DIS2StructureDetector(),     # 1. detect structure
-                    DIS3BlockDetector(),         # 2. detect blocks
-                    DIS4SemanticUnitDetector(),  # 3. detect semantic units
-                    EL2ClarityReorder(),         # 4. reorder by clarity
-                    EL4SemanticFusion(),         # 5. merge meaning
-                    EL3ExpressionShaping(),      # 6. edition logic
-                ]
-            )
+        self.pipeline = Pipeline(
+            stages=[
+                DIS2StructureDetector(),     # 1. detect structure
+                DIS3BlockDetector(),         # 2. detect blocks
+                DIS4SemanticUnitDetector(),  # 3. detect semantic units
+                EL2ClarityReorder(),         # 4. reorder by clarity
+                EL4SemanticFusion(),         # 5. merge meaning
+                EL3ExpressionShaping(),      # 6. edition logic
+            ]
+        )
 
-            self.config: dict = {}
-            self.debug = False
+        self.config = {}
+        self.debug = False
 
 
     # ------------------------------------------------------------
