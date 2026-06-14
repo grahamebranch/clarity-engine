@@ -28,13 +28,18 @@ class ClarityRequest(BaseModel):
 # Dummy clarity engine (replace with your real engine)
 # -------------------------------------------------
 def run_clarity_engine(text: str):
-    # Placeholder logic — your real engine goes here
     improved = text.capitalize()
     sections = [{"title": "Main Idea", "content": improved}]
     trace = ["Engine started", "Engine finished"]
     quality = {"score": 0.8}
-
     return improved, sections, trace, quality
+
+# -------------------------------------------------
+# OPTIONS handler (fixes 401 preflight)
+# -------------------------------------------------
+@app.options("/clarity")
+def clarity_options():
+    return {}
 
 # -------------------------------------------------
 # API endpoint
@@ -42,7 +47,6 @@ def run_clarity_engine(text: str):
 @app.post("/clarity")
 def clarity_endpoint(payload: ClarityRequest):
     improved, sections, trace, quality = run_clarity_engine(payload.text)
-
     return {
         "improved_text": improved,
         "sections": sections,
