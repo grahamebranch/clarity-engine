@@ -2,58 +2,28 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Clarity MVP</title>
+    <title>Clarity Engine UI</title>
     <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-    <header>
-        <h1>Clarity — MVP</h1>
-    </header>
+    <h1>Clarity Engine</h1>
 
-    <main>
+    <textarea id="inputText" placeholder="Enter text here..."></textarea>
+    <button id="runButton">Run Clarity</button>
 
-        <!-- INPUT PANEL -->
-        <section id="input-panel">
-            <h2>Input</h2>
-            <textarea id="inputText" placeholder="Paste your text here..."></textarea>
-            <button id="runButton">Run Clarity</button>
-        </section>
+    <h2>Improved Text</h2>
+    <pre id="improvedText"></pre>
 
-        <!-- OUTPUT PANEL -->
-        <section id="output-panel">
-            <h2>Output</h2>
-            <pre id="improvedText"></pre>
-        </section>
+    <h2>Sections</h2>
+    <pre id="sections"></pre>
 
-        <!-- TABS -->
-        <nav id="tabs">
-            <button data-target="sections-panel">Sections</button>
-            <button data-target="trace-panel">Trace</button>
-            <button data-target="quality-panel">Quality</button>
-        </nav>
+    <h2>Trace</h2>
+    <pre id="trace"></pre>
 
-        <!-- SECTIONS PANEL -->
-        <section id="sections-panel" class="hidden">
-            <h2>Sections</h2>
-            <pre id="sections"></pre>
-        </section>
+    <h2>Quality</h2>
+    <pre id="quality"></pre>
 
-        <!-- TRACE PANEL -->
-        <section id="trace-panel" class="hidden">
-            <h2>Trace</h2>
-            <pre id="trace"></pre>
-        </section>
-
-        <!-- QUALITY PANEL -->
-        <section id="quality-panel" class="hidden">
-            <h2>Quality</h2>
-            <pre id="quality"></pre>
-        </section>
-
-    </main>
-
-    <script src="./script.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
