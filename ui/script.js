@@ -2,7 +2,6 @@ document.getElementById("runButton").addEventListener("click", async () => {
     const inputText = document.getElementById("inputText").value;
 
     const response = await fetch("https://zany-computing-machine-gx47prv67g97fwpgv-8000.app.github.dev/clarity", {
-
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: inputText })
