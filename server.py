@@ -39,11 +39,9 @@ class ClarityRequest(BaseModel):
 # Real Clarity Engine wrapper
 # -------------------------------------------------
 def run_clarity_engine(text: str):
-    """
-    Calls the real Clarity Engine pipeline.
-    Returns: improved_text, sections, trace, quality
-    """
-    return run_pipeline(text)
+    engine = SimpleEngine()
+    engine.load()  # loads config (even if empty)
+    return engine.pipeline.run(text)
 
 
 # -------------------------------------------------
