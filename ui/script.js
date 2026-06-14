@@ -3,6 +3,7 @@ document.getElementById("runButton").addEventListener("click", async () => {
 
     const response = await fetch("https://zany-computing-machine-gx47prv67g97fwpgv-8000.app.github.dev/clarity", {
         method: "POST",
+        mode: "cors",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: inputText })
     });
