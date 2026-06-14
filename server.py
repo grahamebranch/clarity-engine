@@ -36,12 +36,41 @@ class ClarityRequest(BaseModel):
 
 
 # -------------------------------------------------
-# Real Clarity Engine wrapper
+# Real Clarity Engine wrapper (with strict sectioning)
 # -------------------------------------------------
+from rameon_core.engine.clarity_scorer import score_sections
+
 def run_clarity_engine(text: str):
     engine = SimpleEngine()
     engine.load(text)
-    return engine.pipeline.run(text)
+
+    result = engine.pipeline.run(text)
+    print("PIPELINE RESULT:", result)
+
+    # -------------------------------------------------
+    # 1. Expect dict output from MVP pipeline
+    # -------------------------------------------------
+    if isinstance(result, dict):
+        improved = result.get("improved_text", "")
+        sections = result.get("sections", [])
+        trace = result.get("trace", [])
+        quality = result.get("quality", {"score": 0})
+    else:
+        # Fallback for unexpected output
+        improved = str(result)
+        sections = []
+        trace = []
+        quality = {"score": 0}
+
+    # -------------------------------------------------
+    # 2. Apply clarity scoring
+    # -------------------------------------------------
+    quality = score_sections(sections)
+
+    # -------------------------------------------------
+    # 3. Return API contract
+    # -------------------------------------------------
+    return improved, sections, trace, quality
 
 
 # -------------------------------------------------
