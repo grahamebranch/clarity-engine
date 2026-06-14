@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Clarity MVP</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header>
+        <h1>Clarity — MVP</h1>
+    </header>
+
+    <main>
+
+        <!-- INPUT PANEL -->
+        <section id="input-panel">
+            <h2>Input</h2>
+            <textarea id="input-text" placeholder="Paste your text here..."></textarea>
+            <button id="run-btn">Run Clarity</button>
+        </section>
+
+        <!-- OUTPUT PANEL -->
+        <section id="output-panel">
+            <h2>Output</h2>
+            <pre id="output-text"></pre>
+        </section>
+
+        <!-- TABS -->
+        <nav id="tabs">
+            <button data-target="sections-panel">Sections</button>
+            <button data-target="trace-panel">Trace</button>
+            <button data-target="quality-panel">Quality</button>
+        </nav>
+
+        <!-- SECTIONS PANEL -->
+        <section id="sections-panel" class="hidden">
+            <h2>Sections</h2>
+            <pre id="sections-content"></pre>
+        </section>
+
+        <!-- TRACE PANEL -->
+        <section id="trace-panel" class="hidden">
+            <h2>Trace</h2>
+            <pre id="trace-content"></pre>
+        </section>
+
+        <!-- QUALITY PANEL -->
+        <section id="quality-panel" class="hidden">
+            <h2>Quality</h2>
+            <pre id="quality-content"></pre>
+        </section>
+
+    </main>
+
+    <script src="ui.js"></script>
+</body>
+</html>

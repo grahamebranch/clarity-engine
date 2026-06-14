@@ -1,4 +1,4 @@
-from rameon_core.engine.simple_engine_old import SimpleEngine
+from rameon_core.engine.simple_engine import SimpleEngine
 from rameon_core.engine.context import EngineContext
 
 
@@ -19,5 +19,3 @@ if __name__ == "__main__":
     input_data = sys.stdin.read()
 
     run_clarity_engine(input_data)
-
-
