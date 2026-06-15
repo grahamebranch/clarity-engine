@@ -4,6 +4,14 @@ from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import json
+import logging
+
+logging.basicConfig(
+    filename="clarity.log",
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
+
 
 
 # -------------------------------------------------
@@ -96,6 +104,11 @@ async def options_clarity():
 @app.post("/clarity")
 def clarity_endpoint(payload: ClarityRequest):
     improved, sections, trace, quality = run_clarity_engine(payload.text)
+
+    # Logging (correct indentation)
+    logging.info(f"INPUT: {payload.text[:200]}")
+    logging.info(f"SECTIONS: {len(sections)}")
+    logging.info(f"QUALITY: {quality}")
 
     body = json.dumps({
         "improved_text": improved,
