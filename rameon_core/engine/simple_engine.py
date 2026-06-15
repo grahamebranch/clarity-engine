@@ -26,6 +26,7 @@ class SimpleEngine(Engine):
                 DIS2StructureDetector(),     # 1. detect structure
                 DIS3BlockDetector(),         # 2. detect blocks
                 DIS4SemanticUnitDetector(),  # 3. detect semantic units
+                DIS5SectionDetector(),       # 4. detect semantic sections
                 EL2ClarityReorder(),         # 4. reorder by clarity
                 EL4SemanticFusion(),         # 5. merge meaning
                 EL3ExpressionShaping(),      # 6. edition logic

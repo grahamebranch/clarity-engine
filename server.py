@@ -3,6 +3,8 @@ print(">>> USING UPDATED SERVER.PY WITH REAL CLARITY ENGINE <<<")
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+import json
+
 
 # -------------------------------------------------
 # Import the REAL Clarity Engine
@@ -94,9 +96,20 @@ async def options_clarity():
 @app.post("/clarity")
 def clarity_endpoint(payload: ClarityRequest):
     improved, sections, trace, quality = run_clarity_engine(payload.text)
-    return {
+
+    body = json.dumps({
         "improved_text": improved,
         "sections": sections,
         "trace": trace,
         "quality": quality,
-    }
+    })
+
+    return Response(
+        content=body,
+        media_type="application/json",
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )

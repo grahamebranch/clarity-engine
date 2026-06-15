@@ -5,18 +5,23 @@ class Pipeline:
     """
 
     def __init__(self, stages=None):
-        # Stages must be objects with a .run(data) method
         self.stages = stages or []
 
     def run(self, input_data):
-        """
-        Executes each stage in sequence.
-        Whatever the last stage returns becomes the engine output.
-        """
         data = input_data
 
         for stage in self.stages:
-            # Each stage must implement .run(data)
             data = stage.run(data)
+
+            # Integrate DIS5 metadata for Edition Logic
+            if data.get("stage") == "DIS5":
+                sections = data.get("sections", [])
+                for sec in sections:
+                    meta = sec.get("metadata", {})
+                    sec["length"] = meta.get("length")
+                    sec["avg_sentence_length"] = meta.get("avg_sentence_length")
+                    sec["keywords"] = meta.get("keywords")
+                    sec["density"] = meta.get("density")
+                    sec["cohesion_score"] = meta.get("cohesion_score")
 
         return data
