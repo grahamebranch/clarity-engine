@@ -16,6 +16,8 @@ class SimpleEngine(Engine):
         from structure_packs.dis2_structure_detector import DIS2StructureDetector
         from structure_packs.dis3_block_detector import DIS3BlockDetector
         from structure_packs.dis4_semantic_unit_detector import DIS4SemanticUnitDetector
+        from structure_packs.dis5_section_detector import DIS5SectionDetector
+
 
         from edition_logic.el2_clarity_reorder import EL2ClarityReorder
         from edition_logic.el3_expression_shaping import EL3ExpressionShaping
