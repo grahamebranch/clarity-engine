@@ -2,28 +2,56 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Clarity Engine UI</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-    <h1>Clarity Engine</h1>
+    <div id="app-container">
 
-    <textarea id="inputText" placeholder="Enter text here..."></textarea>
-    <button id="runButton">Run Clarity</button>
+        <h1>Clarity Engine</h1>
 
-    <h2>Improved Text</h2>
-    <pre id="improvedText"></pre>
+        <!-- Input Panel -->
+        <div class="panel">
+            <h2>Input</h2>
+            <textarea id="inputText" placeholder="Enter text here..."></textarea>
+            <button id="runButton">Run Engine</button>
+        </div>
 
-    <h2>Sections</h2>
-    <pre id="sections"></pre>
+        <!-- Output Panel -->
+        <div class="panel">
+            <h2>Output</h2>
+            <pre id="improvedText"></pre>
+        </div>
 
-    <h2>Trace</h2>
-    <pre id="trace"></pre>
+        <!-- Sections Panel -->
+        <div class="panel">
+            <h2>Sections</h2>
+            <pre id="sections"></pre>
+        </div>
 
-    <h2>Quality</h2>
-    <pre id="quality"></pre>
+        <!-- Trace Panel -->
+        <div class="panel">
+            <h2>Trace</h2>
+            <pre id="trace"></pre>
+        </div>
 
-    <script src="script.js"></script>
+        <!-- Quality Panel -->
+        <div class="panel">
+            <h2>Quality</h2>
+            <pre id="quality"></pre>
+        </div>
+
+        <!-- ⭐ Diagnostics Panel (EL10) -->
+        <div id="diagnostics-panel" class="panel">
+            <h2>Diagnostics</h2>
+            <pre id="diagnostics-output"></pre>
+        </div>
+
+    </div>
+
+    <script src="./ui.js"></script>
 </body>
 </html>

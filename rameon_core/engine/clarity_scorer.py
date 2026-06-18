@@ -1,84 +1,75 @@
 """
-Clarity Scorer v1.0
--------------------
-Computes a clarity score for each section and an overall document score.
-
-Inputs (from DIS5 + EL2 + EL4 + EL3):
-- length
-- avg_sentence_length
-- density
-- cohesion_score
-- keywords
-
-Outputs:
-- overall score (0–100)
-- per-section scores
+Clarity Scoring v1.0 — FastPath Version
+Deterministic, explainable, section-level scoring.
 """
 
 def score_sections(sections: list[dict]) -> dict:
+    """
+    Produces:
+      - overall score (0–100)
+      - per-section scores
+    """
+
     if not sections:
         return {"score": 0, "per_section": []}
 
     per_section = []
 
     for sec in sections:
-        meta = sec.get("metadata", {})
+        blocks = sec.get("blocks", []) or []
+        text = "\n".join(b.get("text", "") for b in blocks)
 
-        length = meta.get("length", 1)
-        avg_len = meta.get("avg_sentence_length", 1)
-        density = meta.get("density", 1)
-        cohesion = meta.get("cohesion_score", 0)
+        score = 0
 
-        # -------------------------------
-        # Scoring components (0–100 each)
-        # -------------------------------
-
-        # 1. Cohesion (strongest signal)
-        cohesion_score = max(0, min(100, cohesion * 20))
-
-        # 2. Sentence length (shorter = clearer)
-        if avg_len <= 80:
-            sentence_score = 100
-        elif avg_len <= 140:
-            sentence_score = 70
-        elif avg_len <= 200:
-            sentence_score = 40
+        # ----------------------------------------------------
+        # 1. Length fitness (ideal: 40–180 chars)
+        # ----------------------------------------------------
+        length = len(text)
+        if 40 <= length <= 180:
+            score += 30
+        elif 20 <= length <= 300:
+            score += 20
         else:
-            sentence_score = 10
+            score += 10
 
-        # 3. Density (lower = clearer)
-        if density <= 80:
-            density_score = 100
-        elif density <= 140:
-            density_score = 70
-        elif density <= 200:
-            density_score = 40
-        else:
-            density_score = 10
+        # ----------------------------------------------------
+        # 2. Structure clarity
+        # ----------------------------------------------------
+        if blocks:
+            score += 20
+        if any(b.get("text", "").startswith(("-", "*", "•")) for b in blocks):
+            score += 10
 
-        # 4. Length (ideal ≈ 3 units)
-        length_penalty = abs(length - 3) * 10
-        length_score = max(0, 100 - length_penalty)
+        # ----------------------------------------------------
+        # 3. Sentence clarity
+        # ----------------------------------------------------
+        sentences = [s.strip() for s in text.split(".") if s.strip()]
+        if sentences:
+            avg_len = sum(len(s) for s in sentences) / len(sentences)
+            if avg_len <= 120:
+                score += 20
+            elif avg_len <= 200:
+                score += 10
 
-        # -------------------------------
-        # Weighted final score
-        # -------------------------------
-        final_score = (
-            cohesion_score * 0.4 +
-            sentence_score * 0.25 +
-            density_score * 0.2 +
-            length_score * 0.15
-        )
+        # ----------------------------------------------------
+        # 4. Noise penalty
+        # ----------------------------------------------------
+        noise_tokens = ["???", "lorem", "asdf", "xxxx"]
+        if any(tok in text.lower() for tok in noise_tokens):
+            score -= 10
 
-        per_section.append({
-            "id": sec.get("id"),
-            "score": round(final_score, 2)
-        })
+        # Clamp
+        score = max(0, min(100, score))
 
-    # Overall score = average of section scores
-    overall = sum(s["score"] for s in per_section) / len(per_section)
+        sec["clarity_score"] = score
+        per_section.append({"id": sec.get("id"), "score": score})
+
+    # --------------------------------------------------------
+    # Overall score = weighted average
+    # --------------------------------------------------------
+    overall = int(sum(s["score"] for s in per_section) / len(per_section))
 
     return {
-        "score": round(overall, 2),
+        "score": overall,
         "per_section": per_section
     }

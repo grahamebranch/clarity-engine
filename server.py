@@ -1,128 +1,85 @@
-print(">>> USING UPDATED SERVER.PY WITH REAL CLARITY ENGINE <<<")
+"""
+Clarity Engine Server — Final Production Version
+FastAPI server exposing the /run endpoint for the Clarity Engine.
+"""
 
-from fastapi import FastAPI, Response
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import json
-import logging
 
-logging.basicConfig(
-    filename="clarity.log",
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-)
+from clarity_engine.simple_engine import SimpleEngine
 
 
+# -----------------------------
+# Request / Response Models
+# -----------------------------
 
-# -------------------------------------------------
-# Import the REAL Clarity Engine
-# -------------------------------------------------
-from rameon_core.engine.simple_engine import SimpleEngine
+class RunRequest(BaseModel):
+    text: str
 
 
-# -------------------------------------------------
-# FastAPI app
-# -------------------------------------------------
+class RunResponse(BaseModel):
+    text: str
+    sections: list
+    trace: dict
+    quality: dict
+    diagnostics: dict
+
+
+# -----------------------------
+# FastAPI App Setup
+# -----------------------------
+
 app = FastAPI()
 
-# -------------------------------------------------
-# CORS (Codespaces‑safe)
-# -------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_origin_regex=".*",
+    allow_origins=["*"],          # UI on 5500, Postman, browser, etc.
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# -------------------------------------------------
-# Request model
-# -------------------------------------------------
-class ClarityRequest(BaseModel):
-    text: str
+# -----------------------------
+# Engine Instance
+# -----------------------------
+
+engine = SimpleEngine()
 
 
-# -------------------------------------------------
-# Real Clarity Engine wrapper (with strict sectioning)
-# -------------------------------------------------
-from rameon_core.engine.clarity_scorer import score_sections
+# -----------------------------
+# Routes
+# -----------------------------
 
-def run_clarity_engine(text: str):
-    engine = SimpleEngine()
-    engine.load(text)
+@app.post("/run", response_model=RunResponse)
+async def run_clarity(request: RunRequest):
+    """
+    Run the Clarity Engine on the provided text.
+    """
+    result = engine.run(request.text)
 
-    result = engine.pipeline.run(text)
-    print("PIPELINE RESULT:", result)
-
-    # -------------------------------------------------
-    # 1. Expect dict output from MVP pipeline
-    # -------------------------------------------------
-    if isinstance(result, dict):
-        improved = result.get("improved_text", "")
-        sections = result.get("sections", [])
-        trace = result.get("trace", [])
-        quality = result.get("quality", {"score": 0})
-    else:
-        # Fallback for unexpected output
-        improved = str(result)
-        sections = []
-        trace = []
-        quality = {"score": 0}
-
-    # -------------------------------------------------
-    # 2. Apply clarity scoring
-    # -------------------------------------------------
-    quality = score_sections(sections)
-
-    # -------------------------------------------------
-    # 3. Return API contract
-    # -------------------------------------------------
-    return improved, sections, trace, quality
-
-
-# -------------------------------------------------
-# Explicit OPTIONS route (Fixes Codespaces CORS)
-# -------------------------------------------------
-@app.options("/clarity")
-async def options_clarity():
-    return Response(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-        }
+    return RunResponse(
+        text=result.get("text", ""),
+        sections=result.get("sections", []),
+        trace=result.get("trace", {}),
+        quality=result.get("quality", {}),
+        diagnostics=result.get("diagnostics", {})
     )
 
 
-# -------------------------------------------------
-# POST /clarity
-# -------------------------------------------------
-@app.post("/clarity")
-def clarity_endpoint(payload: ClarityRequest):
-    improved, sections, trace, quality = run_clarity_engine(payload.text)
+@app.options("/run")
+async def options_run():
+    """
+    Handle CORS preflight requests.
+    """
+    return {"status": "ok"}
 
-    # Logging (correct indentation)
-    logging.info(f"INPUT: {payload.text[:200]}")
-    logging.info(f"SECTIONS: {len(sections)}")
-    logging.info(f"QUALITY: {quality}")
 
-    body = json.dumps({
-        "improved_text": improved,
-        "sections": sections,
-        "trace": trace,
-        "quality": quality,
-    })
+# -----------------------------
+# Root Endpoint
+# -----------------------------
 
-    return Response(
-        content=body,
-        media_type="application/json",
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "*",
-        }
-    )
+@app.get("/")
+async def root():
+    return {"status": "Clarity Engine Server Running"}

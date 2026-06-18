@@ -1,110 +1,72 @@
-// --- TAB LOGIC ---
-document.querySelectorAll("#tabs button").forEach(btn => {
-    btn.addEventListener("click", () => {
-        const target = btn.dataset.target;
+// ------------------------------------------------------------
+// Clarity Engine UI — FastPath Version
+// Full drop‑in replacement for ui.js
+// ------------------------------------------------------------
 
-        document.querySelectorAll("section").forEach(sec => {
-            if (sec.id.endsWith("-panel") && sec.id !== "input-panel" && sec.id !== "output-panel") {
-                sec.classList.add("hidden");
-            }
-        });
+// Elements
+const inputEl = document.getElementById("inputText");
+const runBtn = document.getElementById("runButton");
 
-        document.getElementById(target).classList.remove("hidden");
-    });
-});
+const outText = document.getElementById("improvedText");
+const outSections = document.getElementById("sections");
+const outTrace = document.getElementById("trace");
+const outQuality = document.getElementById("quality");
+const outDiagnostics = document.getElementById("diagnostics-output");
 
+// ------------------------------------------------------------
+// Render helpers
+// ------------------------------------------------------------
 
-// --- EVENT SENDER (analytics pipe) ---
-async function sendEvent(type, metadata = {}) {
-    const sessionId = getSessionId();
+function renderOutput(text) {
+    outText.textContent = text || "";
+}
 
-    await fetch("/analytics", {
+function renderSections(sections) {
+    outSections.textContent = JSON.stringify(sections, null, 2);
+}
+
+function renderTrace(trace) {
+    outTrace.textContent = JSON.stringify(trace, null, 2);
+}
+
+function renderQuality(quality) {
+    outQuality.textContent = JSON.stringify(quality, null, 2);
+}
+
+function renderDiagnostics(diag) {
+    outDiagnostics.textContent = JSON.stringify(diag, null, 2);
+}
+
+// ------------------------------------------------------------
+// Engine call
+// ------------------------------------------------------------
+
+async function runEngine() {
+    const userText = inputEl.value || "";
+
+    // POST to your engine endpoint
+    const response = await fetch("https://zany-computing-machine-gx47prv67g97fwpgv-8000.app.github.dev/clarity", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            sessionId,
-            type,
-            metadata,
-            timestamp: Date.now()
-        })
-    });
-}
-
-
-// --- SESSION ID ---
-function getSessionId() {
-    let id = sessionStorage.getItem("clarity_session_id");
-    if (!id) {
-        id = crypto.randomUUID();
-        sessionStorage.setItem("clarity_session_id", id);
-    }
-    return id;
-}
-
-
-// --- METADATA HELPERS ---
-function detectDocumentType(text) {
-    if (text.includes("@") && text.includes("Subject")) return "email";
-    if (text.length > 800) return "long_form";
-    if (text.split("\n").length > 5) return "multi_paragraph";
-    return "short_note";
-}
-
-function detectPromptIntent(text) {
-    const t = text.toLowerCase();
-    if (t.startsWith("rewrite")) return "rewrite";
-    if (t.startsWith("summarise") || t.startsWith("summarize")) return "summary";
-    if (t.startsWith("explain")) return "explain";
-    return "unknown";
-}
-
-function detectLanguage(text) {
-    return navigator.language || "unknown";
-}
-
-function complexityScore(text) {
-    const words = text.split(/\s+/).length;
-    if (words < 50) return "simple";
-    if (words < 200) return "medium";
-    return "complex";
-}
-
-
-// --- RUN ENGINE (WIRED TO BACKEND) ---
-document.getElementById("run-btn").addEventListener("click", async () => {
-    const text = document.getElementById("input-text").value;
-
-    // Analytics: engine run
-    sendEvent("engine_run", {
-        inputLength: text.length
+        body: JSON.stringify({ text: userText })
     });
 
-    // Send to backend
-    const response = await fetch("/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text })
+    const result = await response.json();
+
+    // Render everything
+    renderOutput(result.text);
+    renderSections(result.sections);
+    renderTrace(result.trace);
+    renderQuality(result.quality);
+    renderDiagnostics(result.diagnostics);
+}
+
+// ------------------------------------------------------------
+// Bind
+// ------------------------------------------------------------
+
+runBtn.addEventListener("click", () => {
+    runEngine().catch(err => {
+        outText.textContent = "Engine error: " + err;
     });
-
-    const data = await response.json();
-
-    // Fill panels
-    document.getElementById("output-text").textContent = data.output || "";
-    document.getElementById("sections-content").textContent = JSON.stringify(data.sections, null, 2);
-    document.getElementById("trace-content").textContent = JSON.stringify(data.trace, null, 2);
-    document.getElementById("quality-content").textContent = JSON.stringify(data.quality, null, 2);
-
-    // Analytics: metadata
-    sendEvent("metadata", {
-        docType: detectDocumentType(text),
-        intent: detectPromptIntent(text),
-        language: detectLanguage(text),
-        complexity: complexityScore(text)
-    });
-});
-
-
-// --- DROP-OFF TRACKING ---
-window.addEventListener("beforeunload", () => {
-    sendEvent("session_end");
 });
