@@ -1,60 +1,82 @@
 """
-Governance Layer - v1.1
+Governance Layer - v1.0
 
-This module defines the governance and validation layer.
-It validates domain, edition, structure, and constraints
-for any executed output from the Rameon engine.
+Purpose:
+- Enforce deterministic safety and meaning-preservation rules
+- Block disallowed transformations
+- Ensure output remains within permitted behavioural boundaries
+- Provide final guardrails before returning text to the user
 """
 
-class Governance:
+import re
+
+
+class GovernanceLayer:
     def __init__(self):
-        # Governance configuration or rule sets (populated later)
-        self.config = {}
+        # Patterns that must never appear in output
+        self.banned_patterns = [
+            r"\bI predict\b",
+            r"\bI guarantee\b",
+            r"\bI promise\b",
+            r"\bthe model thinks\b",
+            r"\bthis system believes\b",
+        ]
 
-    def validate_domain(self, domain_name: str, instruction_set: dict):
-        """
-        Ensure the instruction set belongs to the correct domain.
-        This is the first functional version (GOV-1).
-        """
-        return {
-            "version": "GOV-1",
-            "status": "DOMAIN-VALID",
-            "domain": domain_name,
-            "instruction_domain": instruction_set.get("domain"),
-        }
+        # Tone constraints
+        self.disallowed_tones = [
+            "hostile",
+            "insulting",
+            "abusive",
+            "demeaning",
+        ]
 
-    def validate_edition(self, edition: str, output: dict):
-        """
-        Ensure the output respects edition isolation.
-        This is the first functional version (GOV-1).
-        """
-        return {
-            "version": "GOV-1",
-            "status": "EDITION-VALID",
-            "edition": edition,
-            "output_edition": output.get("edition"),
-        }
+    # ---------------------------------------------------------
+    # BANNED PATTERN CHECKS
+    # ---------------------------------------------------------
 
-    def validate_structure(self, structure: dict, output: dict):
-        """
-        Ensure the output matches the OSF structure.
-        This is the first functional version (GOV-1).
-        """
-        return {
-            "version": "GOV-1",
-            "status": "STRUCTURE-VALID",
-            "expected_structure": structure,
-            "output_structure": output.get("structure"),
-        }
+    def _remove_banned_patterns(self, text: str) -> str:
+        for pattern in self.banned_patterns:
+            text = re.sub(pattern, "", text, flags=re.IGNORECASE)
+        return text
 
-    def validate_constraints(self, domain_rules: dict, output: dict):
+    # ---------------------------------------------------------
+    # TONE NORMALISATION
+    # ---------------------------------------------------------
+
+    def _normalise_tone(self, text: str) -> str:
         """
-        Enforce domain constraints.
-        This is the first functional version (GOV-1).
+        Deterministic tone softening:
+        - Replace harsh constructions with neutral equivalents
         """
-        return {
-            "version": "GOV-1",
-            "status": "CONSTRAINTS-VALID",
-            "constraints": domain_rules.get("constraints", {}),
-            "output": output,
-        }
+        replacements = [
+            ("stupid", "unwise"),
+            ("idiotic", "misguided"),
+            ("nonsense", "incorrect"),
+            ("ridiculous", "unreasonable"),
+        ]
+
+        for src, dst in replacements:
+            text = re.sub(rf"\b{re.escape(src)}\b", dst, text, flags=re.IGNORECASE)
+
+        return text
+
+    # ---------------------------------------------------------
+    # MEANING PRESERVATION CHECK
+    # ---------------------------------------------------------
+
+    def _ensure_meaning_preservation(self, text: str) -> str:
+        """
+        Placeholder for future semantic checks.
+        Currently deterministic no-op.
+        """
+        return text
+
+    # ---------------------------------------------------------
+    # PUBLIC ENTRYPOINT
+    # ---------------------------------------------------------
+
+    def governance(self, text: str) -> str:
+        text = self._remove_banned_patterns(text)
+        text = self._normalise_tone(text)
+        text = self._ensure_meaning_preservation(text)
+        return text

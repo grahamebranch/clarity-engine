@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from clarity_engine.simple_engine import SimpleEngine
+from rameon_engine import RameonEngine
 
 
 # -----------------------------
@@ -34,7 +34,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # UI on 5500, Postman, browser, etc.
+    allow_origins=["*"],          # UI on 3000, Postman, browser, etc.
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -45,7 +45,7 @@ app.add_middleware(
 # Engine Instance
 # -----------------------------
 
-engine = SimpleEngine()
+engine = RameonEngine()
 
 
 # -----------------------------
@@ -57,14 +57,14 @@ async def run_clarity(request: RunRequest):
     """
     Run the Clarity Engine on the provided text.
     """
-    result = engine.run(request.text)
+    result = engine.process(request.text)
 
     return RunResponse(
-        text=result.get("text", ""),
-        sections=result.get("sections", []),
-        trace=result.get("trace", {}),
-        quality=result.get("quality", {}),
-        diagnostics=result.get("diagnostics", {})
+        text=result,
+        sections=[],       # EL3–EL10 currently return text only
+        trace={},
+        quality={},
+        diagnostics={}
     )
 
 

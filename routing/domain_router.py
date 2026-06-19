@@ -1,33 +1,31 @@
 """
-Domain Routing Layer — FastPath Version
-Determines what type of request the engine should process.
+DomainRouter — determines topic, level, and domain from a user request.
+Deterministic, no AI calls.
 """
 
+from typing import Dict
+
+
 class DomainRouter:
-    def route(self, text: str) -> str:
+    """
+    Very simple deterministic router.
+    """
+
+    def route(self, user_request: str) -> Dict[str, str]:
         """
-        Determine the request type based on simple deterministic rules.
-        No AI interpretation. No semantic guessing.
+        Returns a routing object:
+        {
+            "topic": str,
+            "level": str,
+            "domain": str
+        }
         """
 
-        t = text.strip().lower()
+        cleaned = user_request.strip() if user_request else ""
 
-        # Console commands (start with /)
-        if t.startswith("/"):
-            return "console"
-
-        # Safety rewrite triggers
-        if "rewrite safely" in t or "safety rewrite" in t:
-            return "safety"
-
-        # Lesson generation triggers
-        lesson_keywords = [
-            "lesson", "teach", "explain", "topic", "esl", "exercise",
-            "vocabulary", "dialogue", "practice", "student edition",
-            "trainer edition"
-        ]
-        if any(k in t for k in lesson_keywords):
-            return "lesson"
-
-        # Default: raw text processing
-        return "raw"
+        # Default deterministic routing
+        return {
+            "topic": cleaned if cleaned else "General English",
+            "level": "B1",
+            "domain": "general",
+        }

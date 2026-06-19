@@ -12,7 +12,6 @@ class LessonSectionsBuilder:
         Given an architecture and a topic string, return concrete sections:
         [{ "id": ..., "title": ..., "content": ... }, ...]
         """
-
         sections = []
         for spec in architecture:
             section_id = spec["id"]
@@ -69,4 +68,35 @@ class LessonSectionsBuilder:
         if section_id == "vocab":
             return (
                 f"Useful vocabulary for talking about **{topic_clean}**:\n\n"
-                f"- **Itinerary** — your plan for
+                f"- **Itinerary** — your plan for a trip, including places, times, and activities.\n"
+                f"- **Destination** — the place you are travelling to.\n"
+                f"- **Accommodation** — where you stay (hotel, apartment, hostel, etc.).\n"
+                f"- **Budget** — the amount of money you plan to spend.\n"
+                f"- **Sightseeing** — visiting interesting places as a tourist.\n"
+                f"- **Reservation** — a booking you make in advance.\n"
+                f"- **Travel insurance** — protection in case something goes wrong on your trip.\n"
+            )
+
+        if section_id == "practice":
+            return (
+                f"Now practise using language connected to **{topic_clean}**.\n\n"
+                f"1. Describe a trip you are planning or would like to plan.\n"
+                f"2. Explain your ideal itinerary for a weekend away.\n"
+                f"3. Role-play a conversation where you book accommodation and ask questions.\n"
+                f"4. Talk about a time when your travel plans changed unexpectedly.\n"
+            )
+
+        if section_id == "reflection":
+            return (
+                f"Take a moment to reflect on **{topic_clean}** and your own experience.\n\n"
+                f"- What did you learn about your travel preferences?\n"
+                f"- Did any new vocabulary feel especially useful for you?\n"
+                f"- How confident do you feel talking about trips and travel plans now?\n"
+                f"- What would you like to practise more next time?\n"
+            )
+
+        # Fallback for unknown section IDs
+        return (
+            f"This section is not fully defined yet, but it is linked to **{topic_clean}**.\n"
+            f"Your teacher can use this space for custom activities, notes, or extra practice.\n"
+        )

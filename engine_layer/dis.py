@@ -26,14 +26,11 @@ class DIS:
         Convert domain rules + user request into a DIS instruction set.
         This is the first functional version (DIS-1).
         """
-
-        # Extract domain components
         flows = domain_rules.get("flows", {})
         templates = domain_rules.get("templates", {})
         constraints = domain_rules.get("constraints", {})
         annex_rules = domain_rules.get("annex_rules", {})
 
-        # Build the DIS-1 instruction set
         instruction_set = {
             "version": "DIS-1",
             "request": user_request,
@@ -45,3 +42,10 @@ class DIS:
         }
 
         return instruction_set
+
+    # ------------------------------------------------------------
+    # Temporary shim for pipeline compatibility
+    # ------------------------------------------------------------
+    def apply(self, text: str) -> str:
+        """Temporary no-op pass-through for MVP pipeline."""
+        return text

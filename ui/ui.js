@@ -44,8 +44,8 @@ function renderDiagnostics(diag) {
 async function runEngine() {
     const userText = inputEl.value || "";
 
-    // POST to your engine endpoint
-    const response = await fetch("https://zany-computing-machine-gx47prv67g97fwpgv-8000.app.github.dev/clarity", {
+    // POST to your engine endpoint (corrected: /run)
+    const response = await fetch("https://zany-computing-machine-gx47prv67g97fwpgv-8000.app.github.dev/run", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: userText })

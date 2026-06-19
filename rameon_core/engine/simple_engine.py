@@ -1,101 +1,62 @@
 """
-SimpleEngine — FastPath Version with Routing + Lessons + Formatting + Tracing
+SimpleEngine — orchestrates the full lesson generation pipeline.
 """
 
-from .tracing import TraceCollector
+from typing import Dict, Any
 
-# Domain Routing Layer
-from .routing.domain_router import DomainRouter
-
-# Lesson Generator Core
-from .lesson.lesson_generator import LessonGenerator
-
-# DIS pipeline
-from .dis1_detect_structure import DIS1DetectStructure
-from .dis2_structure_detector import DIS2StructureDetector
-from .dis3_block_detector import DIS3BlockDetector
-from .dis4_semantic_unit_detector import DIS4SemanticUnitDetector
-from .dis5_section_detector import DIS5SectionDetector
-
-# EL pipeline
-from .el2_clarity_reorder import EL2ClarityReorder
-from .el3_expression_shaping import EL3ExpressionShaping
-from .el4_semantic_fusion import EL4SemanticFusion
-from .el5_output_composer import EL5OutputComposer
-from .el6_final_polish import EL6FinalPolish
-from .el7_packaging import EL7Packaging
-from .el8_validation import EL8Validation
-from .el9_export import EL9Export
-from .el10_diagnostics import EL10Diagnostics
-
-# Scoring
-from .clarity_scorer import score_sections
-
-# Output Formatting Layer
-from .output_formatting import output_formatting
+from routing.domain_router import DomainRouter
+from lesson.lesson_generator import LessonGenerator
+from .clarity_scorer import ClarityScorer
+from .output_formatting import format_output
 
 
 class SimpleEngine:
-    def run(self, text: str) -> dict:
-        trace = TraceCollector()
+    """
+    The high-level orchestrator for generating a complete lesson.
+    """
 
-        # ============================================================
-        # Domain Routing Layer
-        # ============================================================
-        router = DomainRouter()
-        mode = router.route(text)
-        data = {"text": text, "mode": mode}
-        trace.add("ROUTER", data)
+    def __init__(self):
+        self.domain_router = DomainRouter()
+        self.lesson_generator = LessonGenerator()
+        self.clarity_scorer = ClarityScorer()
 
-        # ============================================================
-        # Lesson Generator Core (only activates if mode == "lesson")
-        # ============================================================
-        lesson_gen = LessonGenerator()
-        data = lesson_gen.run(data)
-        trace.add("LESSON", {
-            "mode": data.get("mode"),
-            "lesson_type": data.get("lesson_type", None)
-        })
+    # ------------------------------------------------------------------
+    # MAIN ENTRY POINT
+    # ------------------------------------------------------------------
 
-        # ============================================================
-        # DIS Pipeline
-        # ============================================================
-        data = DIS1DetectStructure().run(data); trace.add("DIS1", data)
-        data = DIS2StructureDetector().run(data); trace.add("DIS2", data)
-        data = DIS3BlockDetector().run(data); trace.add("DIS3", data)
-        data = DIS4SemanticUnitDetector().run(data); trace.add("DIS4", data)
-        data = DIS5SectionDetector().run(data); trace.add("DIS5", data)
+    def generate(self, user_request: str) -> Dict[str, Any]:
+        """
+        Full pipeline:
+        1. Route domain
+        2. Generate lesson architecture + content
+        3. Score clarity
+        4. Format final output
+        """
 
-        # ============================================================
-        # EL Pipeline
-        # ============================================================
-        data = EL2ClarityReorder().run(data); trace.add("EL2", data)
-        data = EL3ExpressionShaping().run(data); trace.add("EL3", data)
-        data = EL4SemanticFusion().run(data); trace.add("EL4", data)
-        data = EL5OutputComposer().run(data); trace.add("EL5", data)
-        data = EL6FinalPolish().run(data); trace.add("EL6", data)
-        data = EL7Packaging().run(data); trace.add("EL7", data)
-        data = EL8Validation().run(data); trace.add("EL8", data)
-        data = EL9Export().run(data); trace.add("EL9", data)
-        data = EL10Diagnostics().run(data); trace.add("EL10", data)
+        # 1. Domain routing
+        routing_result = self.domain_router.route(user_request)
 
-        # ============================================================
-        # Scoring
-        # ============================================================
-        data["quality"] = score_sections(data.get("sections", []))
+        # 2. Lesson generation
+        lesson_result = self.lesson_generator.generate_lesson(
+            topic=routing_result["topic"],
+            level=routing_result["level"],
+            domain=routing_result["domain"],
+        )
 
-        # ============================================================
-        # Output Formatting Layer
-        # ============================================================
-        data["text"] = output_formatting(data.get("text", ""))
+        # 3. Clarity scoring
+        clarity_score = self.clarity_scorer.score(lesson_result)
 
-        # ============================================================
-        # Return Final Output
-        # ============================================================
-        return {
-            "text": data.get("text", ""),
-            "sections": data.get("sections", []),
-            "trace": trace.export(),
-            "quality": data.get("quality", {}),
-            "diagnostics": data.get("diagnostics", {})
-        }
+        # 4. Final formatting
+        final_output = format_output(
+            lesson=lesson_result,
+            routing=routing_result,
+            clarity=clarity_score,
+        )
+
+        return final_output
+
+    # ------------------------------------------------------------------
+    # Compatibility wrapper
+    # ------------------------------------------------------------------
+    def run(self, user_request: str):
+        return self.generate(user_request)
