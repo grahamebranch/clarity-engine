@@ -1,13 +1,17 @@
 """
-Clarity Engine Server — Hybrid Version
-FastAPI server exposing the /run endpoint for the Clarity Engine.
+Clarity Engine Server — Unified Version
+FastAPI server exposing:
+- /run_engine  → ClarityEngine
+- /lesson      → LessonEngine (LessonRouter)
 """
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from typing import List, Dict, Any
 
 from clarity_engine import ClarityEngine
+from lesson.lesson_router import LessonRouter
 
 
 # -----------------------------
@@ -26,6 +30,20 @@ class RunResponse(BaseModel):
     diagnostics: dict
 
 
+class LessonRequest(BaseModel):
+    topic: str
+    level: str
+    domain: str = "conversation"
+    edition: str = "trainer"
+    packs: List[str] = []
+
+
+class LessonResponse(BaseModel):
+    metadata: Dict[str, Any]
+    sections: List[Dict[str, Any]]
+    annexes: List[Dict[str, Any]]
+
+
 # -----------------------------
 # FastAPI App Setup
 # -----------------------------
@@ -42,22 +60,23 @@ app.add_middleware(
 
 
 # -----------------------------
-# Engine Instance
+# Engine Instances
 # -----------------------------
 
-engine = ClarityEngine()
+clarity_engine = ClarityEngine()
+lesson_router = LessonRouter()
 
 
 # -----------------------------
-# Routes
+# Clarity Engine Route
 # -----------------------------
 
-@app.post("/run", response_model=RunResponse)
+@app.post("/run_engine", response_model=RunResponse)
 async def run_clarity(request: RunRequest):
     """
     Run the Clarity Engine on the provided text.
     """
-    result = engine.process(request.text)
+    result = clarity_engine.process(request.text)
 
     return RunResponse(
         text=result.get("text", ""),
@@ -68,11 +87,37 @@ async def run_clarity(request: RunRequest):
     )
 
 
-@app.options("/run")
+@app.options("/run_engine")
 async def options_run():
+    return {"status": "ok"}
+
+
+# -----------------------------
+# Lesson Engine Route
+# -----------------------------
+
+@app.post("/lesson", response_model=LessonResponse)
+async def generate_lesson(request: LessonRequest):
     """
-    Handle CORS preflight requests.
+    Generate a structured lesson using the Lesson Engine.
     """
+    lesson = lesson_router.generate(
+        topic=request.topic,
+        level=request.level,
+        domain=request.domain,
+        edition=request.edition,
+        packs=request.packs,
+    )
+
+    return LessonResponse(
+        metadata=lesson["metadata"],
+        sections=lesson["sections"],
+        annexes=lesson["annexes"],
+    )
+
+
+@app.options("/lesson")
+async def options_lesson():
     return {"status": "ok"}
 
 

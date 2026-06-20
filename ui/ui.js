@@ -1,72 +1,137 @@
-// ------------------------------------------------------------
-// Clarity Engine UI — FastPath Version
-// Full drop‑in replacement for ui.js
-// ------------------------------------------------------------
+// ui.js — FastPath Whole-File Replacement
+// Clarity Companion — UI/Engine Integration Stabilisation
 
-// Elements
-const inputEl = document.getElementById("inputText");
-const runBtn = document.getElementById("runButton");
+document.addEventListener("DOMContentLoaded", () => {
+    const generateBtn = document.getElementById("generateBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const topicInput = document.getElementById("topicInput");
+    const outputContainer = document.getElementById("outputContainer");
+    const statusBar = document.getElementById("statusBar");
+    const metadataBar = document.getElementById("metadataBar");
 
-const outText = document.getElementById("improvedText");
-const outSections = document.getElementById("sections");
-const outTrace = document.getElementById("trace");
-const outQuality = document.getElementById("quality");
-const outDiagnostics = document.getElementById("diagnostics-output");
+    // -----------------------------
+    // STATE
+    // -----------------------------
+    let isLoading = false;
 
-// ------------------------------------------------------------
-// Render helpers
-// ------------------------------------------------------------
+    // -----------------------------
+    // UI HELPERS
+    // -----------------------------
+    function setLoading(state) {
+        isLoading = state;
 
-function renderOutput(text) {
-    outText.textContent = text || "";
-}
+        if (state) {
+            statusBar.innerText = "Generating lesson…";
+            statusBar.className = "status loading";
+            generateBtn.disabled = true;
+            outputContainer.classList.add("adaptive-soft");
+        } else {
+            statusBar.innerText = "";
+            statusBar.className = "status";
+            generateBtn.disabled = false;
+            outputContainer.classList.remove("adaptive-soft");
+        }
+    }
 
-function renderSections(sections) {
-    outSections.textContent = JSON.stringify(sections, null, 2);
-}
+    function showError(msg) {
+        statusBar.innerText = msg;
+        statusBar.className = "status error";
+        outputContainer.classList.add("adaptive-error");
+    }
 
-function renderTrace(trace) {
-    outTrace.textContent = JSON.stringify(trace, null, 2);
-}
+    function clearUI() {
+        topicInput.value = "";
+        outputContainer.innerHTML = "";
+        metadataBar.innerHTML = "";
+        statusBar.innerText = "";
+        statusBar.className = "status";
+        outputContainer.className = "";
+    }
 
-function renderQuality(quality) {
-    outQuality.textContent = JSON.stringify(quality, null, 2);
-}
+    function applyAdaptiveLayout(lesson) {
+        const sectionCount = lesson.sections.length;
 
-function renderDiagnostics(diag) {
-    outDiagnostics.textContent = JSON.stringify(diag, null, 2);
-}
+        if (sectionCount <= 3) {
+            outputContainer.classList.add("adaptive-compact");
+        } else {
+            outputContainer.classList.add("adaptive-expanded");
+        }
 
-// ------------------------------------------------------------
-// Engine call
-// ------------------------------------------------------------
+        if (lesson.tone === "reflective") {
+            outputContainer.classList.add("adaptive-soft");
+        } else if (lesson.tone === "technical") {
+            outputContainer.classList.add("adaptive-sharp");
+        }
+    }
 
-async function runEngine() {
-    const userText = inputEl.value || "";
+    // -----------------------------
+    // RENDERING
+    // -----------------------------
+    function renderLesson(lesson) {
+        outputContainer.innerHTML = "";
 
-    // POST to your engine endpoint (corrected: /run)
-    const response = await fetch("https://zany-computing-machine-gx47prv67g97fwpgv-8000.app.github.dev/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: userText })
-    });
+        lesson.sections.forEach(sec => {
+            const div = document.createElement("div");
+            div.className = "lesson-section";
 
-    const result = await response.json();
+            div.innerHTML = `
+                <h3>${sec.title}</h3>
+                <p>${sec.content}</p>
+            `;
 
-    // Render everything
-    renderOutput(result.text);
-    renderSections(result.sections);
-    renderTrace(result.trace);
-    renderQuality(result.quality);
-    renderDiagnostics(result.diagnostics);
-}
+            outputContainer.appendChild(div);
+        });
 
-// ------------------------------------------------------------
-// Bind
-// ------------------------------------------------------------
+        metadataBar.innerHTML = `
+            <div class="meta-item">Engine v${lesson.engine_version}</div>
+            <div class="meta-item">Domain Pack: ${lesson.domain}</div>
+            <div class="meta-item">Generated: ${new Date().toLocaleString()}</div>
+        `;
 
-runBtn.addEventListener("click", () => {
-    runEngine().catch(err => {
-        outText.textContent = "Engine error: " + err;
-    });
+        applyAdaptiveLayout(lesson);
+    }
+
+    // -----------------------------
+    // ENGINE CALL
+    // -----------------------------
+    async function generateLesson() {
+        const topic = topicInput.value.trim();
+        if (!topic) {
+            showError("Please enter a topic.");
+            return;
+        }
+
+        clearUI();
+        setLoading(true);
+
+        try {
+            const response = await fetch("/generate_lesson", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ topic })
+            });
+
+            if (!response.ok) {
+                throw new Error("Engine returned an error.");
+            }
+
+            const data = await response.json();
+
+            if (!data || !data.sections) {
+                throw new Error("Malformed engine response.");
+            }
+
+            renderLesson(data);
+        } catch (err) {
+            showError("Error: " + err.message);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    // -----------------------------
+    // EVENT LISTENERS
+    // -----------------------------
+    generateBtn.addEventListener("click", generateLesson);
+    clearBtn.addEventListener("click", clearUI);
 });

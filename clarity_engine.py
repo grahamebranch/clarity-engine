@@ -1,11 +1,11 @@
 """
-clarity_engine.py — Hybrid-ready Clarity Engine (placeholder LLM, sections only)
+clarity_engine.py — Hybrid-ready Clarity Engine (placeholder LLM, sections + improved text)
 
 Current scope:
 - clean input text
 - produce simple sections
+- generate improved text via placeholder LLM
 - prepare structure for later trace/quality/diagnostics
-- use a local LLM placeholder (no external dependency yet)
 """
 
 from dataclasses import dataclass, asdict
@@ -164,19 +164,21 @@ class ClarityEngine:
 
         - clean the input text
         - create simple sections
+        - generate improved text via placeholder LLM
         - (placeholder) trace/quality/diagnostics
         """
         cleaned = clean_text(text)
         sections = make_sections(cleaned)
 
+        # NEW: generate improved text using placeholder LLM
+        improved_text = call_llm(cleaned)
+
         result = EngineResult(
-            text=cleaned,
+            text=improved_text,
             sections=sections,
             trace={},          # to be filled later
             quality={},        # to be filled later
             diagnostics={},    # to be filled later
         )
 
-        result_dict = asdict(result)
-        # sections are already converted to list[dict] by asdict()
-        return result_dict
+        return asdict(result)

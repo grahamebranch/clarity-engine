@@ -1,3 +1,8 @@
+"""
+Trace Layer — Snapshot-Based
+Captures text + sections at each stage.
+"""
+
 class TraceCollector:
     def __init__(self):
         self.steps = []

@@ -50,8 +50,51 @@
             <pre id="diagnostics-output"></pre>
         </div>
 
+
+        <!-- ========================================================= -->
+        <!-- ⭐ LESSON ENGINE UI (NEW)                                 -->
+        <!-- ========================================================= -->
+
+        <h1>Lesson Engine</h1>
+
+        <div class="panel">
+            <h2>Lesson Input</h2>
+
+            <label>Topic:</label>
+            <input id="lessonTopic" type="text" placeholder="e.g., Travel, Technology, Food" />
+
+            <label>Level:</label>
+            <input id="lessonLevel" type="text" placeholder="e.g., A2, B1, C1" />
+
+            <label>Domain:</label>
+            <input id="lessonDomain" type="text" value="conversation" placeholder="conversation / vocabulary / grammar" />
+
+            <label>Edition:</label>
+            <input id="lessonEdition" type="text" value="trainer" placeholder="trainer / student_core / student_plus / trainer_lite" />
+
+            <label>Packs (comma-separated):</label>
+            <input id="lessonPacks" type="text" placeholder="vocab, grammar, errors, culture, guidance" />
+
+            <button id="lessonButton">Generate Lesson</button>
+        </div>
+
+        <div class="panel">
+            <h2>Lesson Metadata</h2>
+            <pre id="lessonMetadata"></pre>
+        </div>
+
+        <div class="panel">
+            <h2>Lesson Sections</h2>
+            <pre id="lessonSections"></pre>
+        </div>
+
+        <div class="panel">
+            <h2>Lesson Annexes</h2>
+            <pre id="lessonAnnexes"></pre>
+        </div>
+
     </div>
 
-    <script src="./ui.js"></script>
+    <script src="./script.js"></script>
 </body>
 </html>

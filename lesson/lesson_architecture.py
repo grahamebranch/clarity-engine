@@ -1,12 +1,63 @@
 """
-Lesson Architecture — defines the skeleton for each lesson type.
+Lesson Architecture — deterministic skeleton for each lesson type.
+Upgraded to align with the new LessonGenerator engine.
 """
 
 from typing import List, Dict
 
 
-class LessonArchitecture:
-    def get_architecture(self, lesson_type: str) -> List[Dict[str, str]]:
+class LessonArchitectureBuilder:
+    """
+    Builds the deterministic architecture for a lesson.
+    The upgraded LessonGenerator calls:
+        architecture = builder.build(topic, level, domain)
+    """
+
+    def build(self, topic: str, level: str, domain: str) -> List[Dict[str, str]]:
+        """
+        Determine the lesson type from domain or fallback to conversation.
+        Domain may later map to:
+            - conversation
+            - vocabulary
+            - grammar
+            - business
+            - exam
+            - etc.
+        For now, we keep deterministic behaviour.
+        """
+
+        lesson_type = self._resolve_lesson_type(domain)
+        return self._get_architecture(lesson_type)
+
+    # ---------------------------------------------------------
+    # INTERNAL RESOLUTION
+    # ---------------------------------------------------------
+
+    def _resolve_lesson_type(self, domain: str) -> str:
+        """
+        Maps domain → lesson type.
+        This keeps the system extensible without guessing.
+        """
+
+        domain = domain.lower().strip()
+
+        if domain in ("conversation", "general", "speaking"):
+            return "conversation"
+
+        if domain in ("vocabulary", "lexis"):
+            return "vocabulary"
+
+        if domain in ("grammar", "structure"):
+            return "grammar"
+
+        # fallback
+        return "conversation"
+
+    # ---------------------------------------------------------
+    # ARCHITECTURE DEFINITIONS
+    # ---------------------------------------------------------
+
+    def _get_architecture(self, lesson_type: str) -> List[Dict[str, str]]:
         """
         Return a list of section specs:
         [{ "id": "warmup", "title": "Warm-up", "role": "..." }, ...]
@@ -40,4 +91,4 @@ class LessonArchitecture:
             ]
 
         # Fallback: conversation skeleton
-        return self.get_architecture("conversation")
+        return self._get_architecture("conversation")

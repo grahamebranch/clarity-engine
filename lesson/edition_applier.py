@@ -1,5 +1,6 @@
 """
 Edition Applier — shapes sections for student/trainer editions.
+Upgraded to align with the new LessonGenerator engine.
 """
 
 from typing import List, Dict
@@ -8,45 +9,53 @@ from .guidance.guidance_router import GuidanceRouter
 
 
 class EditionApplier:
+    """
+    Applies edition-specific transformations to lesson sections.
+
+    IMPORTANT:
+    - The upgraded LessonGenerator expects a *single* edition string,
+      not a list of editions.
+    - This applier now returns a single list of sections, not a dict.
+    """
+
     def __init__(self) -> None:
         self.guidance = GuidanceEnricher()
         self.guidance_router = GuidanceRouter()
 
+    # ---------------------------------------------------------
+    # PUBLIC API (aligned with LessonGenerator)
+    # ---------------------------------------------------------
+
     def apply(
         self,
         sections: List[Dict[str, str]],
-        editions: List[str],
-        level: str,
-        domain: str = "lesson",
-    ) -> Dict[str, List[Dict[str, str]]]:
+        edition: str,
+        domain: str,
+        level: str = "intermediate",
+    ) -> List[Dict[str, str]]:
         """
-        Returns edition-specific versions of the sections.
-        Domain-aware: guidance is applied only if the router approves for (editions, domain).
+        Returns a single edition-specific version of the sections.
+        Domain-aware: guidance is applied only if the router approves.
         """
 
-        result: Dict[str, List[Dict[str, str]]] = {}
+        if edition == "student_core":
+            return self._build_student_core(sections)
 
-        # --- Student Core (no guidance) ---
-        if "student_core" in editions:
-            result["student_core"] = self._build_student_core(sections)
+        if edition == "student_plus":
+            return self._build_student_plus(sections, level, domain)
 
-        # --- Student Plus ---
-        if "student_plus" in editions:
-            result["student_plus"] = self._build_student_plus(sections, level, domain)
+        if edition == "trainer_lite":
+            return self._build_trainer_lite(sections, level, domain)
 
-        # --- Trainer Lite ---
-        if "trainer_lite" in editions:
-            result["trainer_lite"] = self._build_trainer_lite(sections, level, domain)
+        if edition == "trainer":
+            return self._build_trainer_edition(sections, level, domain)
 
-        # --- Full Trainer Edition ---
-        if "trainer" in editions:
-            result["trainer"] = self._build_trainer_edition(sections, level, domain)
+        # fallback: return unchanged
+        return sections
 
-        return result
-
-    # -------------------------------------------------------------------------
+    # ---------------------------------------------------------
     # Edition Builders
-    # -------------------------------------------------------------------------
+    # ---------------------------------------------------------
 
     def _build_student_core(self, sections: List[Dict[str, str]]) -> List[Dict[str, str]]:
         return sections
@@ -59,7 +68,6 @@ class EditionApplier:
     ) -> List[Dict[str, str]]:
         enriched = sections
 
-        # Domain-aware guidance
         if self.guidance_router.should_apply(["student_plus"], domain):
             enriched = self.guidance.apply(enriched, level, domain)
 
@@ -73,7 +81,6 @@ class EditionApplier:
     ) -> List[Dict[str, str]]:
         enriched = sections
 
-        # Domain-aware guidance
         if self.guidance_router.should_apply(["trainer_lite"], domain):
             enriched = self.guidance.apply(enriched, level, domain)
 
@@ -87,7 +94,6 @@ class EditionApplier:
     ) -> List[Dict[str, str]]:
         enriched = sections
 
-        # Domain-aware guidance
         if self.guidance_router.should_apply(["trainer"], domain):
             enriched = self.guidance.apply(enriched, level, domain)
 
