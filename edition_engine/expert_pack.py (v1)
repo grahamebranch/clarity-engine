@@ -1,0 +1,52 @@
+# expert_pack.py — FastPath Whole-File Replacement
+# Clarity Companion — Expert Edition Pack (v1)
+
+from typing import Dict
+
+class ExpertEditionPack:
+    """
+    Expert Edition Pack
+    Assumes prior knowledge and focuses on nuance, precision, and deeper conceptual framing.
+    Works alongside the Edition Engine's generic 'expert' transform.
+    """
+
+    def __init__(self):
+        self.version = "1.0"
+
+    # ---------------------------------------------------------
+    # EXPERT LOGIC
+    # ---------------------------------------------------------
+    def refine_line(self, line: str) -> str:
+        """
+        Sharpens a line by removing basic explanation and emphasizing nuance.
+        """
+        if not line.strip():
+            return ""
+        return f"- Insight: {line.strip()}"
+
+    def refine_block(self, title: str, content: str) -> str:
+        """
+        Converts a section into an expert-level rendering.
+        """
+        lines = content.strip().split("\n")
+        refined = [self.refine_line(line) for line in lines]
+
+        return (
+            f"### {title} — Expert Analysis\n"
+            "Key insights and nuanced considerations:\n"
+            + "\n".join(refined)
+            + "\n"
+        )
+
+    # ---------------------------------------------------------
+    # MAIN ENTRY POINT
+    # ---------------------------------------------------------
+    def apply(self, rendered_sections: Dict[str, str]) -> str:
+        """
+        Applies expert logic to all rendered lesson sections.
+        """
+        expert_blocks = []
+        for title, content in rendered_sections.items():
+            expert_blocks.append(self.refine_block(title, content))
+
+        return "\n".join(expert_blocks)

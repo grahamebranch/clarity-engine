@@ -1,46 +1,27 @@
-"""
-ClarityScorer — deterministic clarity scoring for generated lessons.
-"""
-
-from typing import Dict, Any
-
-
-class ClarityScorer:
+def score_text(text: str) -> int:
     """
-    Provides a simple, deterministic clarity score for a generated lesson.
+    Simple deterministic clarity score (0–100).
+    v0.1 heuristic:
+    - penalize very long or very short text
+    - penalize excessive punctuation
+    - reward moderate length and clean structure
     """
+    if not text or not text.strip():
+        return 0
 
-    def score(self, lesson: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Returns a clarity score object:
-        {
-            "score": float,
-            "explanation": str
-        }
-        """
+    length = len(text)
 
-        # Basic deterministic scoring based on section completeness
-        sections = lesson.get("sections", [])
-        num_sections = len(sections)
+    if length < 50:
+        base = 40
+    elif length < 200:
+        base = 70
+    elif length < 800:
+        base = 85
+    else:
+        base = 60
 
-        if num_sections == 0:
-            return {
-                "score": 0.0,
-                "explanation": "No sections were generated, so clarity cannot be assessed."
-            }
+    punct = sum(text.count(p) for p in "!?;:")
+    penalty = min(punct * 2, 20)
 
-        # Simple heuristic: more complete sections = higher clarity
-        completeness = sum(
-            1 for s in sections
-            if s.get("title") and s.get("content")
-        )
-
-        score = round((completeness / num_sections) * 10, 2)
-
-        return {
-            "score": score,
-            "explanation": (
-                f"The lesson contains {completeness} fully-formed sections "
-                f"out of {num_sections}, resulting in a clarity score of {score}."
-            )
-        }
+    score = base - penalty
+    return max(0, min(100, score))

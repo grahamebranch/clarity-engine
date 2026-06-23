@@ -1,137 +1,174 @@
-// ui.js — FastPath Whole-File Replacement
-// Clarity Companion — UI/Engine Integration Stabilisation
+const inputBox = document.getElementById("inputBox");
+const runButton = document.getElementById("runButton");
+const outputBox = document.getElementById("outputBox");
+const errorBox = document.getElementById("errorBox");
+const clarityScoreEl = document.getElementById("clarityScore");
+const outputLengthEl = document.getElementById("outputLength");
+const timestampEl = document.getElementById("timestamp");
+const sectionsBox = document.getElementById("sectionsBox");
+const darkModeToggle = document.getElementById("darkModeToggle");
+const panelToggles = document.querySelectorAll(".panel-toggle");
 
-document.addEventListener("DOMContentLoaded", () => {
-    const generateBtn = document.getElementById("generateBtn");
-    const clearBtn = document.getElementById("clearBtn");
-    const topicInput = document.getElementById("topicInput");
-    const outputContainer = document.getElementById("outputContainer");
-    const statusBar = document.getElementById("statusBar");
-    const metadataBar = document.getElementById("metadataBar");
+let streamingInterval = null;
 
-    // -----------------------------
-    // STATE
-    // -----------------------------
-    let isLoading = false;
-
-    // -----------------------------
-    // UI HELPERS
-    // -----------------------------
-    function setLoading(state) {
-        isLoading = state;
-
-        if (state) {
-            statusBar.innerText = "Generating lesson…";
-            statusBar.className = "status loading";
-            generateBtn.disabled = true;
-            outputContainer.classList.add("adaptive-soft");
-        } else {
-            statusBar.innerText = "";
-            statusBar.className = "status";
-            generateBtn.disabled = false;
-            outputContainer.classList.remove("adaptive-soft");
-        }
+// ---------------------------------------------------------
+// API CALL
+// ---------------------------------------------------------
+async function callEngine(text) {
+  const response = await fetch(
+    "https://zany-computing-machine-gx47prv67g97fwpgv-8000.app.github.dev/generate",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text })
     }
+  );
 
-    function showError(msg) {
-        statusBar.innerText = msg;
-        statusBar.className = "status error";
-        outputContainer.classList.add("adaptive-error");
+  if (!response.ok) {
+    throw new Error("Engine request failed");
+  }
+
+  return await response.json();
+}
+
+// ---------------------------------------------------------
+// SIMULATED STREAMING
+// ---------------------------------------------------------
+function simulateStreaming(fullText) {
+  if (streamingInterval) {
+    clearInterval(streamingInterval);
+    streamingInterval = null;
+  }
+
+  outputBox.textContent = "";
+  let index = 0;
+  const chunkSize = 4; // characters per tick
+  const delay = 20; // ms per tick
+
+  streamingInterval = setInterval(() => {
+    if (index >= fullText.length) {
+      clearInterval(streamingInterval);
+      streamingInterval = null;
+      return;
     }
+    const nextChunk = fullText.slice(index, index + chunkSize);
+    outputBox.textContent += nextChunk;
+    index += chunkSize;
+  }, delay);
+}
 
-    function clearUI() {
-        topicInput.value = "";
-        outputContainer.innerHTML = "";
-        metadataBar.innerHTML = "";
-        statusBar.innerText = "";
-        statusBar.className = "status";
-        outputContainer.className = "";
-    }
+// ---------------------------------------------------------
+// RENDER METADATA
+// ---------------------------------------------------------
+function renderMetadata(result) {
+  clarityScoreEl.textContent = result.clarity_score;
+  outputLengthEl.textContent = result.output.length;
+  timestampEl.textContent = new Date().toISOString();
 
-    function applyAdaptiveLayout(lesson) {
-        const sectionCount = lesson.sections.length;
+  sectionsBox.innerHTML = "";
+  if (result.sections && result.sections.length > 0) {
+    result.sections.forEach((section) => {
+      const div = document.createElement("div");
+      div.className = "section-item";
 
-        if (sectionCount <= 3) {
-            outputContainer.classList.add("adaptive-compact");
-        } else {
-            outputContainer.classList.add("adaptive-expanded");
-        }
+      const title = document.createElement("div");
+      title.className = "section-title";
+      title.textContent = section.title;
 
-        if (lesson.tone === "reflective") {
-            outputContainer.classList.add("adaptive-soft");
-        } else if (lesson.tone === "technical") {
-            outputContainer.classList.add("adaptive-sharp");
-        }
-    }
+      const content = document.createElement("div");
+      content.className = "section-content";
+      content.textContent = section.content;
 
-    // -----------------------------
-    // RENDERING
-    // -----------------------------
-    function renderLesson(lesson) {
-        outputContainer.innerHTML = "";
+      div.appendChild(title);
+      div.appendChild(content);
+      sectionsBox.appendChild(div);
+    });
+  } else {
+    const empty = document.createElement("div");
+    empty.className = "section-item";
+    empty.textContent = "No sections detected.";
+    sectionsBox.appendChild(empty);
+  }
+}
 
-        lesson.sections.forEach(sec => {
-            const div = document.createElement("div");
-            div.className = "lesson-section";
+// ---------------------------------------------------------
+// MAIN HANDLER
+// ---------------------------------------------------------
+async function runEngine() {
+  const text = inputBox.value.trim();
+  if (!text) return;
 
-            div.innerHTML = `
-                <h3>${sec.title}</h3>
-                <p>${sec.content}</p>
-            `;
+  errorBox.innerText = "";
+  outputBox.textContent = "Processing…";
+  clarityScoreEl.textContent = "–";
+  outputLengthEl.textContent = "–";
+  timestampEl.textContent = "–";
+  sectionsBox.innerHTML = "";
+  runButton.disabled = true;
 
-            outputContainer.appendChild(div);
-        });
+  try {
+    const result = await callEngine(text);
+    simulateStreaming(result.output);
+    renderMetadata(result);
+  } catch (err) {
+    console.error(err);
+    errorBox.innerText = "Engine failed to process text.";
+    outputBox.textContent = "";
+  } finally {
+    runButton.disabled = false;
+  }
+}
 
-        metadataBar.innerHTML = `
-            <div class="meta-item">Engine v${lesson.engine_version}</div>
-            <div class="meta-item">Domain Pack: ${lesson.domain}</div>
-            <div class="meta-item">Generated: ${new Date().toLocaleString()}</div>
-        `;
-
-        applyAdaptiveLayout(lesson);
-    }
-
-    // -----------------------------
-    // ENGINE CALL
-    // -----------------------------
-    async function generateLesson() {
-        const topic = topicInput.value.trim();
-        if (!topic) {
-            showError("Please enter a topic.");
-            return;
-        }
-
-        clearUI();
-        setLoading(true);
-
-        try {
-            const response = await fetch("/generate_lesson", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ topic })
-            });
-
-            if (!response.ok) {
-                throw new Error("Engine returned an error.");
-            }
-
-            const data = await response.json();
-
-            if (!data || !data.sections) {
-                throw new Error("Malformed engine response.");
-            }
-
-            renderLesson(data);
-        } catch (err) {
-            showError("Error: " + err.message);
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    // -----------------------------
-    // EVENT LISTENERS
-    // -----------------------------
-    generateBtn.addEventListener("click", generateLesson);
-    clearBtn.addEventListener("click", clearUI);
+// ---------------------------------------------------------
+// DARK MODE
+// ---------------------------------------------------------
+darkModeToggle.addEventListener("click", () => {
+  document.body.classList.toggle("dark-mode");
 });
+
+// ---------------------------------------------------------
+// PANEL COLLAPSE
+// ---------------------------------------------------------
+panelToggles.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const target = btn.getAttribute("data-target");
+    const panel = document.querySelector(`.panel[data-panel="${target}"]`);
+    if (!panel) return;
+
+    const collapsed = panel.classList.toggle("collapsed");
+    btn.textContent = collapsed ? "+" : "−";
+  });
+});
+
+// ---------------------------------------------------------
+// KEYBOARD SHORTCUTS
+// ---------------------------------------------------------
+document.addEventListener("keydown", (e) => {
+  // Ctrl+Enter => run
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    runEngine();
+    return;
+  }
+
+  // D => dark mode
+  if (e.key === "d" || e.key === "D") {
+    document.body.classList.toggle("dark-mode");
+    return;
+  }
+
+  // M => toggle metadata panel
+  if (e.key === "m" || e.key === "M") {
+    const panel = document.querySelector('.panel[data-panel="metadata"]');
+    const btn = document.querySelector('.panel-toggle[data-target="metadata"]');
+    if (panel && btn) {
+      const collapsed = panel.classList.toggle("collapsed");
+      btn.textContent = collapsed ? "+" : "−";
+    }
+  }
+});
+
+// ---------------------------------------------------------
+// BUTTON WIRING
+// ---------------------------------------------------------
+runButton.addEventListener("click", runEngine);

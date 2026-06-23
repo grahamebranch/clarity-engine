@@ -1,16 +1,19 @@
 """
-LessonRouter — routes topic/level/domain/edition/packs into LessonGenerator.
+LessonRouter — entry point for lesson generation.
+Delegates to LessonOrchestrator.
 """
 
 from typing import Dict, Any, List, Optional
+
 from .lesson_generator import LessonGenerator
+from .lesson_orchestrator import LessonOrchestrator
 
 
 class LessonRouter:
     """
     Thin routing layer that:
     - receives lesson generation requests
-    - forwards them to LessonGenerator
+    - forwards them to LessonOrchestrator
     - returns a structured lesson object
     """
 
@@ -23,6 +26,7 @@ class LessonRouter:
             llm_client=llm_client,
             storage_client=storage_client,
         )
+        self.orchestrator = LessonOrchestrator(self.generator)
 
     def generate(
         self,
@@ -37,10 +41,9 @@ class LessonRouter:
         Returns a structured lesson object.
         """
 
-        return self.generator.generate_lesson(
+        return self.orchestrator.orchestrate(
             topic=topic,
             level=level,
             domain=domain,
             edition=edition,
-            packs=packs or [],
         )

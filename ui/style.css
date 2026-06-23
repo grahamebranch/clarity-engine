@@ -1,101 +1,197 @@
-/* style.css — FastPath Whole-File Replacement */
-/* Clarity Companion — UI/Engine Integration Stabilisation */
+:root {
+  --bg: #ffffff;
+  --bg-panel: #f5f5f5;
+  --bg-code: #1e1e1e;
+  --text: #222222;
+  --text-muted: #555555;
+  --accent: #0078ff;
+  --accent-soft: #e0efff;
+  --error: #d32f2f;
+}
 
-/* ------------------------------
-   BASE LAYOUT
------------------------------- */
+body.dark-mode {
+  --bg: #121212;
+  --bg-panel: #1e1e1e;
+  --bg-code: #111111;
+  --text: #f5f5f5;
+  --text-muted: #bbbbbb;
+  --accent: #4ea3ff;
+  --accent-soft: #1b3a5c;
+  --error: #ef5350;
+}
 
 body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 20px;
-    background: #f7f9fc;
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-bottom: 1px solid #ddd;
+}
+
+.header h1 {
+  margin: 0;
+}
+
+.header-controls button {
+  padding: 8px 14px;
+  font-size: 14px;
+  border-radius: 4px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.header-controls button:hover {
+  opacity: 0.9;
 }
 
 .container {
-    max-width: 900px;
-    margin: auto;
+  display: grid;
+  grid-template-columns: 1.2fr 1.2fr 0.9fr;
+  gap: 16px;
+  padding: 16px 24px 24px;
+  box-sizing: border-box;
 }
 
-h1 {
-    margin-bottom: 20px;
+.panel {
+  background: var(--bg-panel);
+  border-radius: 8px;
+  padding: 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
 
-input, button {
-    padding: 10px;
-    font-size: 16px;
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
-#outputContainer {
-    margin-top: 20px;
-    padding: 20px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+.panel-header h2 {
+  margin: 0;
 }
 
-.lesson-section {
-    margin-bottom: 20px;
+.panel-toggle {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
 }
 
-.lesson-section h3 {
-    margin-bottom: 8px;
+textarea {
+  width: 100%;
+  height: 180px;
+  padding: 12px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  resize: vertical;
+  box-sizing: border-box;
+  background: #fff;
+  color: #000;
 }
 
-/* ------------------------------
-   STATUS + ERROR + LOADING
------------------------------- */
-
-.status {
-    margin-top: 10px;
-    font-size: 14px;
+body.dark-mode textarea {
+  background: #111;
+  color: #f5f5f5;
+  border-color: #444;
 }
 
-.status.loading {
-    color: #0077ff;
+button#runButton {
+  margin-top: 12px;
+  padding: 10px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
 }
 
-.status.error {
-    color: #d9534f;
+button#runButton:disabled {
+  background: #7aaef5;
+  cursor: not-allowed;
 }
 
-/* ------------------------------
-   ADAPTIVE UI PHASE 1
------------------------------- */
-
-.adaptive-soft {
-    transition: all 0.3s ease;
-    background: rgba(200, 220, 255, 0.15);
+.error {
+  margin-top: 8px;
+  color: var(--error);
+  font-weight: bold;
+  font-size: 13px;
 }
 
-.adaptive-sharp {
-    transition: all 0.3s ease;
-    background: rgba(255, 240, 200, 0.15);
+.code-block {
+  margin: 0;
+  padding: 12px;
+  background: var(--bg-code);
+  color: #f5f5f5;
+  border-radius: 6px;
+  white-space: pre-wrap;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 13px;
+  min-height: 180px;
+  box-sizing: border-box;
 }
 
-.adaptive-error {
-    background: rgba(255, 0, 0, 0.05);
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  margin-bottom: 4px;
 }
 
-.adaptive-compact .lesson-section {
-    margin-bottom: 10px;
+.meta-label {
+  color: var(--text-muted);
 }
 
-.adaptive-expanded .lesson-section {
-    margin-bottom: 25px;
+#sectionsBox {
+  margin-top: 8px;
+  max-height: 220px;
+  overflow-y: auto;
 }
 
-/* ------------------------------
-   METADATA BAR
------------------------------- */
-
-#metadataBar {
-    margin-top: 10px;
-    opacity: 0.8;
+.section-item {
+  padding: 8px;
+  margin-bottom: 6px;
+  border-radius: 4px;
+  background: var(--accent-soft);
 }
 
-.meta-item {
-    font-size: 12px;
-    margin-right: 10px;
-    display: inline-block;
+.section-title {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.section-content {
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+.footer {
+  padding: 8px 24px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  border-top: 1px solid #ddd;
+}
+
+/* Collapsed panels */
+.panel.collapsed .panel-header + * {
+  display: none;
+}
+.panel.collapsed textarea,
+.panel.collapsed pre,
+.panel.collapsed #metaContent {
+  display: none;
 }

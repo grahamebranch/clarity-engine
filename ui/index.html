@@ -1,100 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clarity Engine UI</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>Clarity Engine UI</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-
-    <div id="app-container">
-
-        <h1>Clarity Engine</h1>
-
-        <!-- Input Panel -->
-        <div class="panel">
-            <h2>Input</h2>
-            <textarea id="inputText" placeholder="Enter text here..."></textarea>
-            <button id="runButton">Run Engine</button>
-        </div>
-
-        <!-- Output Panel -->
-        <div class="panel">
-            <h2>Output</h2>
-            <pre id="improvedText"></pre>
-        </div>
-
-        <!-- Sections Panel -->
-        <div class="panel">
-            <h2>Sections</h2>
-            <pre id="sections"></pre>
-        </div>
-
-        <!-- Trace Panel -->
-        <div class="panel">
-            <h2>Trace</h2>
-            <pre id="trace"></pre>
-        </div>
-
-        <!-- Quality Panel -->
-        <div class="panel">
-            <h2>Quality</h2>
-            <pre id="quality"></pre>
-        </div>
-
-        <!-- ⭐ Diagnostics Panel (EL10) -->
-        <div id="diagnostics-panel" class="panel">
-            <h2>Diagnostics</h2>
-            <pre id="diagnostics-output"></pre>
-        </div>
-
-
-        <!-- ========================================================= -->
-        <!-- ⭐ LESSON ENGINE UI (NEW)                                 -->
-        <!-- ========================================================= -->
-
-        <h1>Lesson Engine</h1>
-
-        <div class="panel">
-            <h2>Lesson Input</h2>
-
-            <label>Topic:</label>
-            <input id="lessonTopic" type="text" placeholder="e.g., Travel, Technology, Food" />
-
-            <label>Level:</label>
-            <input id="lessonLevel" type="text" placeholder="e.g., A2, B1, C1" />
-
-            <label>Domain:</label>
-            <input id="lessonDomain" type="text" value="conversation" placeholder="conversation / vocabulary / grammar" />
-
-            <label>Edition:</label>
-            <input id="lessonEdition" type="text" value="trainer" placeholder="trainer / student_core / student_plus / trainer_lite" />
-
-            <label>Packs (comma-separated):</label>
-            <input id="lessonPacks" type="text" placeholder="vocab, grammar, errors, culture, guidance" />
-
-            <button id="lessonButton">Generate Lesson</button>
-        </div>
-
-        <div class="panel">
-            <h2>Lesson Metadata</h2>
-            <pre id="lessonMetadata"></pre>
-        </div>
-
-        <div class="panel">
-            <h2>Lesson Sections</h2>
-            <pre id="lessonSections"></pre>
-        </div>
-
-        <div class="panel">
-            <h2>Lesson Annexes</h2>
-            <pre id="lessonAnnexes"></pre>
-        </div>
-
+  <header class="header">
+    <h1>Clarity Engine</h1>
+    <div class="header-controls">
+      <button id="darkModeToggle">Dark mode</button>
     </div>
+  </header>
 
-    <script src="./script.js"></script>
+  <main class="container">
+
+    <section class="panel" data-panel="input">
+      <div class="panel-header">
+        <h2>Input</h2>
+        <button class="panel-toggle" data-target="input">−</button>
+      </div>
+      <textarea id="inputBox" placeholder="Enter text..."></textarea>
+      <button id="runButton">Run Engine (Ctrl+Enter)</button>
+      <div id="errorBox" class="error"></div>
+    </section>
+
+    <section class="panel" data-panel="output">
+      <div class="panel-header">
+        <h2>Output</h2>
+        <button class="panel-toggle" data-target="output">−</button>
+      </div>
+      <pre id="outputBox" class="code-block"></pre>
+    </section>
+
+    <section class="panel" data-panel="metadata">
+      <div class="panel-header">
+        <h2>Metadata</h2>
+        <button class="panel-toggle" data-target="metadata">−</button>
+      </div>
+      <div id="metaContent">
+        <div class="meta-row">
+          <span class="meta-label">Clarity score:</span>
+          <span id="clarityScore">–</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Length:</span>
+          <span id="outputLength">–</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Last run:</span>
+          <span id="timestamp">–</span>
+        </div>
+        <h3>Sections</h3>
+        <div id="sectionsBox"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <span>Shortcuts: Ctrl+Enter = Run · D = Dark mode · M = Toggle metadata</span>
+  </footer>
+
+  <script src="ui.js"></script>
 </body>
 </html>
